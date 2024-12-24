@@ -1,0 +1,9 @@
+{
+    "Triclinic":["TricPrim"],
+    "Monoclinic":["MonoPrim","MonoBase"],
+    "Orthorhombic":["OrthPrim","OrthBase","OrthBody","OrthFace"],
+    "Tetragonal":["TetrPrim","TetrBody"],
+    "Trigonal":["TrigPrim"],
+    "Hexagonal":["HexaPrim"],
+    "Cubic":["CubiPrim","CubiFace","CubiBody"]
+}

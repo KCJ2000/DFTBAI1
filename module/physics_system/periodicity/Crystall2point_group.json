@@ -1,0 +1,9 @@
+{
+    "Triclinic":["C1","Ci"],
+    "Monoclinic":["C2","Cs","C2h"],
+    "Orthorhombic":["D2","D2h","C2v"],
+    "Tetragonal":["D4h","D4","C4h","D2d","S4","C4","C4v"],
+    "Trigonal":["D3h","D3","C3","S6","C3v"],
+    "Hexagonal":["D6h","D6","C6v","C6h","D3h","C3h","C6"],
+    "Cubic":["Td","Oh","O","Th","T"]
+}
