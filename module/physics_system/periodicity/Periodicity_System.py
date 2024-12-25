@@ -146,7 +146,7 @@ class PeriodicityPhysicsSystem(Phy_Sys):
                         if not np.allclose(output,self.atom_rep[j],rtol=1.e-5,atol=1.e-7):
                             unequality.append(self.atom_rep[j])
                     self.atom_rep = np.array(unequality)
-            n_atom = self.atom_rep.shape[0]
+                n_atom = self.atom_rep.shape[0]
             i += 1
             Wyckoff_position0 = np.array(Wyckoff_position0)
             Wyckoff_position.append(Wyckoff_position0)
