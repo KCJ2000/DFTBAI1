@@ -56,14 +56,25 @@ class PeriodicityPhysicsSystem(Phy_Sys):
             folder_path = os.path.dirname(__file__)
             with open(os.path.join(folder_path,"Crystall2point_group.json")) as f:
                 crystall2point_group_table = json.load(f)
+
             if point_group_name not in crystall2point_group_table[lattice.lattice_type]:
                 recommend = [key for key,value in crystall2point_group_table.items() if point_group_name in value]
                 ### 到这一步，point_group_name 一定可以在这里找到，因为是程序的定义直接得到的
                 raise AssertionError("所定义的晶格{}和所定义的对称性操作点群{}并不匹配，按照Crystall2point_group.json中的记录，应该是{}类型的".format(
                     lattice.lattice_type,point_group_name,recommend))
-            else:
-                return lattice
+                
+            ### 如果是Space Group，check the Bravais lattice of space group No. sgno.
+            if self.group_type == "Space Group":
+                with open(os.path.join(folder_path,"Bravais2sgno.json")) as f:
+                    bravais2sgno_table = json.load(f)   
+                group_num = int(self.group.group_name["UNI_Number"])
+                if group_num not in bravais2sgno_table[self.lattice_type]:
+                    recommend = [key for key,value in bravais2sgno_table.items() if group_num in value]
+                    raise AssertionError("所定义的晶格{}和所定义的空间群{}并不匹配，按照Bravais2sgno.json中的记录，该空间群应该是{}类型的".format(
+                        self.lattice_type,group_num,recommend))
             
+            return lattice
+        
         if self.group != None and self.lattice_type == None:
             return bravaislattice(bravais_lattice_type=self.lattice_type)
             
