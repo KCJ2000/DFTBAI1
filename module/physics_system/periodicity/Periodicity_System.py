@@ -12,7 +12,7 @@ from physics_system.Physics_System import Phy_Sys
 class PeriodicityPhysicsSystem(Phy_Sys):
     def __init__(self,sys_name=None,group_type=None,group_name=None,
                  lattice_type=None,lattice_parameter={},atompos = [],magdirect = [],
-                 n_neighbour = 3):
+                 neighbour_list = []):
         super(PeriodicityPhysicsSystem,self).__init__(sys_name)
         self.group_type = group_type  ### 定义这里定义哪个群类，比如是点群还是空间群还是磁群
         self.group_name = group_name
@@ -25,7 +25,8 @@ class PeriodicityPhysicsSystem(Phy_Sys):
         self.wyckoffpos = []
         self.have_check = False ###是否通过对称性操作生成了所有的原子占位
         self.atom_symmetry_check()
-        self.n_neighbour = n_neighbour
+        self.neighbour_list = neighbour_list
+        self.n_neighbour = max(neighbour_list)
         ###提取原子之间的近邻关系，分别得到不同晶格间原子的distance,原子间近邻关系，和对应近邻的距离
         self.atom_distance ,self.atom_neighbour,self.have_detect = self.atom_bond()
         ###通过上一步的结果整理，返回的是记录self.atompos中的第几号原子以及原子坐标的dict
@@ -165,6 +166,16 @@ class PeriodicityPhysicsSystem(Phy_Sys):
         self.wyckoffpos = Wyckoff_position
         self.atom_rep = np.concatenate(Wyckoff_position,axis=0)      
         self.n_atom = len(self.atom_rep)
+        self.n_wyck = len(self.wyckoffpos)
+        self.wyckoff_num_list = [len(self.wyckoffpos[i]) for i in range(self.n_wyck)]
+        self.atom2wyck_index_table = {}
+        anchor_index =0
+        for i in range(self.n_atom):
+            if i >= sum(self.wyckoff_num_list[0:anchor_index+1]):
+                anchor_index +=1
+                self.atom2wyck_index_table[i] = anchor_index
+            else:
+                self.atom2wyck_index_table[i] = anchor_index
         self.dim_rep = len(self.atom_rep[0])
                 
             
@@ -327,13 +338,13 @@ class PeriodicityPhysicsSystem(Phy_Sys):
         for i in range(n_atom):
             neighbour_table.append({})
         for i in range(n_atom):
-            for j in range(self.n_neighbour):
+            for j in range(self.neighbour_list[self.atom2wyck_index_table[i]]):
                 neighbour_table[i][str(j)] = []
         for i in range(n_atom):
             for j in range(n_atom):
                 index_key =  self.atom_neighbour[i][j].keys()
                 for index0 in index_key:
-                    if self.atom_neighbour[i][j][index0] < self.n_neighbour:
+                    if self.atom_neighbour[i][j][index0] < self.neighbour_list[self.atom2wyck_index_table[i]]:
                         index = index0[1:-1].split()
                         index = np.array([float(index[0]),float(index[1]),float(index[2])])
                         neighbour_table[i][str(self.atom_neighbour[i][j][index0])].append((j,self.atompos[j]+index))
