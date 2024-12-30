@@ -179,7 +179,7 @@ class ParaTB_train:
 
 if __name__ == "__main__":
     p = ParaTB("/home/hp/users/kfh/DFTBAI1/example/test_TB/Si_like/Si_PC/Si_sps'.pkl")
-    k_point = torch.tensor([[0,0,0],[0.5,0.5,0.5]]).transpose(0,1)
+    k_point = torch.tensor([[0,0,0],[0.5,0.5,0.5]],dtype=torch.float64).transpose(0,1).to("cuda:0")
     matrix = p.matrix_function(k_point)
     print(matrix.shape)
     print(matrix.dtype)
