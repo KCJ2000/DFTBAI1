@@ -6,7 +6,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
 import torch
 from torch import nn
 import torch.optim as opt
-torch.autograd.set_detect_anomaly(True)
+# torch.autograd.set_detect_anomaly(True)
 
 from parameter.para4tb import ParaTB,ParaTB_train
 
