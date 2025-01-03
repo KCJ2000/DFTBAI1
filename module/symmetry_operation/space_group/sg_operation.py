@@ -116,7 +116,8 @@ class SpaceGroupOp(SymOp):
     
 if __name__ == '__main__':
     space = SpaceGroupOp(155)
-    print(space.group_name)        
+    print(space)
+    print("space name",space.group_name)        
     print("space_group_operation",space.group_operation)
     print("space_group_operation_rep",space.group_operation_rep)
     print(space.pointgroup.group_name)

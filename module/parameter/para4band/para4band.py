@@ -71,16 +71,18 @@ class Para4Band_train(ParaTB_train):
         loss = torch.mean(loss0) + torch.mean(loss1)      
         return loss
         
-    def loss3(self,eigen_matrices,band_index,energy):
+    def loss3(self,eigen_matrices,model_index,energy):
         eigens = torch.diagonal(eigen_matrices,dim1=-1,dim2=-2).type(torch.float32) ###Hermit矩阵实数特征值
         eigens = torch.sort(eigens,dim=-1)[0]
         
-        eigens = eigens[:,:,band_index]
+        eigens = eigens[:,:,model_index]
         energy = energy.repeat(eigens.shape[0],1,1)
-        loss = torch.mean(torch.abs(eigens-energy))
+        delta_energy = torch.abs(eigens-energy)
+        loss1,_ = torch.topk(delta_energy,eigens.shape[0],dim=-1)
+        loss = torch.mean(delta_energy) + torch.mean(loss1)
         return loss
     
-    def loss(self,input_data,band_index,energy,eye_matrices):
+    def loss(self,input_data,model_index,energy,eye_matrices,n_iter_band):
         
         eigen_matrices = self.para4TB(input_data)
         ### loss1是为了保证特征值矩阵是对角矩阵
@@ -88,16 +90,19 @@ class Para4Band_train(ParaTB_train):
         ### loss2是为了保证特征向量的正交性
         loss2 = self.loss2(eye_matrices)
         ### loss3是为了拟合能带
-        loss3 = self.loss3(eigen_matrices,band_index,energy)
-        if loss2<1e-2 and loss3+loss1 <= 1e-2:
+        loss3 = self.loss3(eigen_matrices,model_index,energy)
+
+        if loss3>1e-2 and n_iter_band<=1e4:
+            return "特征值优化",loss3
+        elif loss2+loss1 >0.2:
+            return "正交保障",loss1+loss2
+        elif loss3<=1e-2 and loss1+loss2 <= 0.2:
             return "break",-1
-        elif loss3+loss1 >= loss2:
-            return "特征值优化",loss3 + loss1
-        elif loss2 >= loss3 + loss1:
-            return "正交优化",loss2
+
 
         
-    def train(self,epoch,k_points,energy,band_index,para=None):
+    def train(self,epoch,k_points,energy,model_index,
+              para=None):
         """训练band的过程
 
         Args:
@@ -120,23 +125,19 @@ class Para4Band_train(ParaTB_train):
 
         k_points = k_points.to(self.para4TB.device)
         energy = energy.to(self.para4TB.device)
-        center = int(self.para4TB.matrix_dim/2)
-        band_index = torch.tensor(band_index)
-        band_index_center = int(torch.sum(band_index)/band_index.shape[0])
-        band_index = band_index - band_index_center + center -3
-        print(band_index)
+        
         self.para4TB.init_trans_matrix(k_points)
         
-        optimizer = opt.Adam(self.para4TB.parameters(),lr=0.001, betas=(0.9, 0.999), eps=1e-8, weight_decay=1e-5)
+        optimizer = opt.SGD(self.para4TB.parameters(),lr=0.001, weight_decay=1e-5)
                            
         eye_matrices = torch.diag_embed(torch.ones(self.para4TB.num_para,
                                                    num_k_points,
                                                    self.para4TB.matrix_dim)).to(self.para4TB.device)    
         
-        total_train_band = 0
-        loss_band = 0
+        orth_error = 0
+        n_iter_band = 0
         for i in range(epoch):
-            loss_type,loss = self.loss(k_points,band_index,energy,eye_matrices)
+            loss_type,loss = self.loss(k_points,model_index,energy,eye_matrices,n_iter_band)
             # print(optimizer.param_groups)
             optimizer.zero_grad()  # 清除旧的梯度 
             # loss.backward(retain_graph=True)       # 计算新的梯度
@@ -147,20 +148,25 @@ class Para4Band_train(ParaTB_train):
             #     else:
             #         print(name, 'does not have gradient')
             optimizer.step()
-            if loss_type == "正交优化":
-                loss_band = loss
-                total_train_band += 1
+            if loss_type == "正交保障":
+                self.para4TB.init_trans_matrix(k_points)
+        
+                optimizer = opt.SGD(self.para4TB.parameters(),lr=0.001, weight_decay=1e-5)
+                n_iter_band = 0
+                orth_error = loss
+            elif loss_type == "特征值优化":
+                n_iter_band += 1
             elif loss_type == "break":
                 break
             if i %1000 == 0:
                 params_values = torch.transpose(torch.stack([param.detach() for param in self.para4TB.para]),dim0=0,dim1=1)
                 # print(self.para4TB.para[0].grad)
-                print(i,loss_type,loss,params_values,total_train_band,loss_band)
+                print(i,loss_type,loss,params_values,orth_error)
             
             
             
 from physics_property.band.band_data_in import BandDataIn
-
+import time
 if __name__ == "__main__":
     mask = [1,2,6,7,9,10,12]
     para_train = Para4Band_train("/home/hp/users/kfh/DFTBAI1/example/test_TB/Si_like/Si_PC/Si_sps'.pkl",
@@ -169,16 +175,23 @@ if __name__ == "__main__":
     k_points = torch.tensor(band_in.content["k_vector"]).transpose(dim0=0,dim1=1)*2*torch.pi
     band_index = [1,2,3,4]
     energy = torch.tensor(band_in.content["energy"][:,band_index])
-    para = torch.tensor([[1,0,0,1,1,1,0,0,1,0,0,1,0,1,1]],dtype=torch.float32)
+    model_index = [1,2,3,4]
+    # para = torch.tensor([[1,0,0,1,1,1,0,0,1,0,0,1,0,1,1]],dtype=torch.float32)
+    para = torch.randn(1,15)
+    for i in mask:
+        para[0,i] = 0
     # para = torch.tensor([[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],dtype=torch.float32)
-    para = torch.tensor([[-4.2,0,0,6.6850,1.715,-8.3/4,0,0,-5.7292/4,0,0,-5.3749/4,0,1.715/4,4.575/4]],dtype=torch.float32)
+    # para = torch.tensor([[-4.2,0,0,6.6850,1.715,-8.3/4,0,0,-5.7292/4,0,0,-5.3749/4,0,1.715/4,4.575/4]],dtype=torch.float32)
     # para = torch.tensor([[-3.6794,  0.0000,  0.0000,  6.6766,  1.5710, -1.9928,  0.0000,  0.0000,-1.4614,  0.0000,  0.0000, -1.1135,  0.0000,  0.4030,  1.2013]])
-    para = torch.tensor([[-4.0771,  0.0000,  0.0000,  3.6879,  1.2270, -1.6666,  0.0000,  0.0000,  -1.4248,  0.0000,  0.0000, -0.4334,  0.0000,  0.3119,  1.1078]])
+    # para = torch.tensor([[-4.0771,  0.0000,  0.0000,  3.6879,  1.2270, -1.6666,  0.0000,  0.0000,  -1.4248,  0.0000,  0.0000, -0.4334,  0.0000,  0.3119,  1.1078]])
+    # para = torch.tensor([[-2.6193,  0.0000,  0.0000,  3.8806,  2.3433, -0.9512,  0.0000,  0.0000,  -1.5930,  0.0000,  0.0000, -0.0275,  0.0000, -0.0144,  1.5422]])### 无法描述band gap
+    start_time = time.time()
     para_train.train(epoch = int(1e7),
                      k_points = k_points,
                      energy = energy,
-                     band_index=band_index,
+                     model_index=model_index,
                      para=para)
-    
+    end_time = time.time()
+    print(end_time-start_time)
     
     

@@ -103,7 +103,10 @@ class TBHamiltonian(Hamiltonian):
             symbol_index = 0
             matrix = np.zeros((n_sys_orbit,n_sys_orbit),dtype=object)
             for i in range(n_atom):
-                neighbour_list = neighbour_table[i][str(neighbour0)]
+                if str(neighbour0) in neighbour_table[i].keys():
+                    neighbour_list = neighbour_table[i][str(neighbour0)]
+                else:
+                    continue
                 atom_related = set([atom_index0 for atom_index0,_ in neighbour_list])
                 for j in atom_related:
                     matrix[sys_atom_list[i]:sys_atom_list[i+1],
@@ -426,7 +429,7 @@ if __name__ == "__main__":
                 "lattice_parameter":{"a":1},
                 "atompos":[[1/8,1/8,1/8]],
                 # "magdirect":[[0,0,0]],
-                "n_neighbour":2
+                "neighbour_list":[2]
                 }
     
     # sysinit = {
