@@ -10,11 +10,14 @@ import numpy as np
 from torch import exp
 
 class ParaTB(nn.Module):
-    def __init__(self,model_path:str) -> None:
+    def __init__(self,model_path:str,device:str=None) -> None:
         super(ParaTB,self).__init__()
         self.matrix,self.model_info,self.num_symbols,self.name,self.matrix_dim = self.load_and_check_matrix(model_path)
         self.num_para = 1
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        if device:
+            self.device = device
+        else:
+            self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.para = nn.ParameterList([nn.Parameter(torch.ones(self.num_para))for _ in range(self.num_symbols)]).to(self.device)
         
         self.__have_get_TB_fix_data = False
@@ -161,10 +164,11 @@ class ParaTB(nn.Module):
     
     
 class ParaTB_train:
-    def __init__(self,model_path:str,mask_index:list=None) -> None:
+    def __init__(self,model_path:str,mask_index:list=None,device=None) -> None:
         """need to init a Parameter class using model_path"""
         self.model_path = model_path
         self.mask_index = mask_index
+        self.device = device
 
     def init_model(self,para):
         pass

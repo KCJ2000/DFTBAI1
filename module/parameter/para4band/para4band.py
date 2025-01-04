@@ -12,8 +12,8 @@ from parameter.para4tb import ParaTB,ParaTB_train
 
 
 class Para4Band(ParaTB):
-    def __init__(self, model_path: str) -> None:
-        super().__init__(model_path)
+    def __init__(self, model_path: str,device:str=None) -> None:
+        super().__init__(model_path,device)
         self.property_for_opt = "band"
         self.have_init_trans = False
         
@@ -39,9 +39,9 @@ class Para4Band(ParaTB):
     
     
 class Para4Band_train(ParaTB_train):
-    def __init__(self,model_path,mask_index = None):
-        super(Para4Band_train,self).__init__(model_path,mask_index)
-        self.para4TB = Para4Band(self.model_path)
+    def __init__(self,model_path,mask_index = None,device=None):
+        super(Para4Band_train,self).__init__(model_path,mask_index,device)
+        self.para4TB = Para4Band(self.model_path,device)
         self.mask()
 
     def init_para(self,para):
@@ -116,7 +116,7 @@ class Para4Band_train(ParaTB_train):
             raise ValueError("输入的能级(energy)个数应该与k点个数相等,且与band_index个数相等,应输入({},{})型tensor,现在输入{}型tensor".format(num_k_points,
                                                                                                                 len(band_index),
                                                                                                                 energy.shape))
-        if max(band_index)-min(band_index) > self.para4TB.matrix_dim:
+        if energy.shape[1] > self.para4TB.matrix_dim:
             raise AssertionError("能带条数超出模型表达能力范围")
         
         if para!=None:
@@ -139,15 +139,6 @@ class Para4Band_train(ParaTB_train):
         for i in range(epoch):
             loss_type,loss = self.loss(k_points,model_index,energy,eye_matrices,n_iter_band)
             # print(optimizer.param_groups)
-            optimizer.zero_grad()  # 清除旧的梯度 
-            # loss.backward(retain_graph=True)       # 计算新的梯度
-            loss.backward()
-            # for name, param in self.para4TB.named_parameters():
-            #     if param.grad is not None:
-            #         print(name, 'has gradient', param.grad)
-            #     else:
-            #         print(name, 'does not have gradient')
-            optimizer.step()
             if loss_type == "正交保障":
                 self.para4TB.init_trans_matrix(k_points)
         
@@ -157,7 +148,20 @@ class Para4Band_train(ParaTB_train):
             elif loss_type == "特征值优化":
                 n_iter_band += 1
             elif loss_type == "break":
+                params_values = torch.transpose(torch.stack([param.detach() for param in self.para4TB.para]),dim0=0,dim1=1)
+                print("完成优化，收敛，参数为：")
+                print(params_values)
                 break
+            optimizer.zero_grad()  # 清除旧的梯度 
+            # loss.backward(retain_graph=True)       # 计算新的梯度
+            loss.backward()
+            # for name, param in self.para4TB.named_parameters():
+            #     if param.grad is not None:
+            #         print(name, 'has gradient', param.grad)
+            #     else:
+            #         print(name, 'does not have gradient')
+            optimizer.step()
+
             if i %1000 == 0:
                 params_values = torch.transpose(torch.stack([param.detach() for param in self.para4TB.para]),dim0=0,dim1=1)
                 # print(self.para4TB.para[0].grad)
@@ -169,6 +173,7 @@ from physics_property.band.band_data_in import BandDataIn
 import time
 if __name__ == "__main__":
     mask = [1,2,6,7,9,10,12]
+    mask = []
     para_train = Para4Band_train("/home/hp/users/kfh/DFTBAI1/example/test_TB/Si_like/Si_PC/Si_sps'.pkl",
                               mask)
     band_in = BandDataIn("/home/hp/users/kfh/DFTBAI1/example/test_TB/Si_like/Si_PC/BAND.dat")
