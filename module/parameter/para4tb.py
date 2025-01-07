@@ -10,9 +10,12 @@ import numpy as np
 from torch import exp
 
 class ParaTB(nn.Module):
-    def __init__(self,model_path:str,device:str=None) -> None:
+    def __init__(self,model_path:str,zero_index=None,device:str=None) -> None:
         super(ParaTB,self).__init__()
         self.matrix,self.model_info,self.num_symbols,self.name,self.matrix_dim = self.load_and_check_matrix(model_path)
+        if zero_index == None:
+            self.zero_index = []
+        else:self.zero_index = zero_index
         self.num_para = 1
         if device:
             self.device = device
@@ -20,8 +23,9 @@ class ParaTB(nn.Module):
             self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.para = nn.ParameterList([nn.Parameter(torch.ones(self.num_para))for _ in range(self.num_symbols)]).to(self.device)
         
+        
         self.__have_get_TB_fix_data = False
-        self.matrix_function = self.create_model_function()
+        self.set_zero_and_init_matrix_fuction() ### self.matrix_function() have been initialed in self.set_zero()
         self.property_for_opt = ""
         
         
@@ -157,17 +161,22 @@ class ParaTB(nn.Module):
         should_para_shape = (self.num_para,len(self.para))
         if para.shape == should_para_shape:
             self.para = nn.ParameterList([nn.Parameter(para[:,i]) for i in range(self.num_symbols)]).to(self.device)
-            self.matrix_function = self.create_model_function()
+            self.set_zero_and_init_matrix_fuction()
         else:
             raise AssertionError("我们需要输入的para.shape是{}，当先输入的形状是{}".format(should_para_shape,para.shape))    
     
+    def set_zero_and_init_matrix_fuction(self):
+        for index in self.zero_index:
+            self.para[index] = nn.Parameter(torch.zeros(self.num_para)).to(self.device)
+        self.matrix_function = self.create_model_function()
     
     
 class ParaTB_train:
-    def __init__(self,model_path:str,mask_index:list=None,device=None) -> None:
+    def __init__(self,model_path:str,mask_index:list=None,zero_index=None,device=None) -> None:
         """need to init a Parameter class using model_path"""
         self.model_path = model_path
         self.mask_index = mask_index
+        self.zero_index = zero_index
         self.device = device
 
     def init_model(self,para):
