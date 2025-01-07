@@ -12,10 +12,11 @@ from parameter.para4tb import ParaTB,ParaTB_train
 
 
 class Para4Band(ParaTB):
-    def __init__(self, model_path: str,device:str=None) -> None:
-        super().__init__(model_path,device)
+    def __init__(self, model_path: str,zero_index=None,device:str=None) -> None:
+        super().__init__(model_path,zero_index,device)
         self.property_for_opt = "band"
         self.have_init_trans = False
+        self.set_zero_and_init_matrix_fuction()
         
     def init_trans_matrix(self,input_data,para=None):
         if para != None:
@@ -39,9 +40,9 @@ class Para4Band(ParaTB):
     
     
 class Para4Band_train(ParaTB_train):
-    def __init__(self,model_path,mask_index = None,device=None):
-        super(Para4Band_train,self).__init__(model_path,mask_index,device)
-        self.para4TB = Para4Band(self.model_path,device)
+    def __init__(self,model_path,mask_index = None,zero_index = None,device=None):
+        super(Para4Band_train,self).__init__(model_path,mask_index,zero_index,device)
+        self.para4TB = Para4Band(self.model_path,zero_index,device)
         self.mask()
 
     def init_para(self,para):
@@ -82,7 +83,7 @@ class Para4Band_train(ParaTB_train):
         loss = torch.mean(delta_energy) + torch.mean(loss1)
         return loss
     
-    def loss(self,input_data,model_index,energy,eye_matrices,n_iter_band):
+    def loss(self,input_data,model_index,energy,eye_matrices):
         
         eigen_matrices = self.para4TB(input_data)
         ### loss1是为了保证特征值矩阵是对角矩阵
@@ -92,7 +93,7 @@ class Para4Band_train(ParaTB_train):
         ### loss3是为了拟合能带
         loss3 = self.loss3(eigen_matrices,model_index,energy)
 
-        if loss3>1e-2 and n_iter_band<=1e4:
+        if loss3>1e-2 and (torch.randn(1)<=1 or loss1+loss2<=0.2):
             return "特征值优化",loss3
         elif loss2+loss1 >0.2:
             return "正交保障",loss1+loss2
@@ -128,54 +129,74 @@ class Para4Band_train(ParaTB_train):
         
         self.para4TB.init_trans_matrix(k_points)
         
-        optimizer = opt.SGD(self.para4TB.parameters(),lr=0.001, weight_decay=1e-5)
-                           
+        optimizer = opt.Adam(self.para4TB.parameters(),lr=0.001)
+        # print(optimizer.param_groups)               
         eye_matrices = torch.diag_embed(torch.ones(self.para4TB.num_para,
                                                    num_k_points,
                                                    self.para4TB.matrix_dim)).to(self.para4TB.device)    
         
         orth_error = 0
-        n_iter_band = 0
+        eig_loss_list = []
+        n_eig_loss = 0
+        para_log = []
+        loss_log = []
         for i in range(epoch):
-            loss_type,loss = self.loss(k_points,model_index,energy,eye_matrices,n_iter_band)
+            loss_type,loss = self.loss(k_points,model_index,energy,eye_matrices)
             # print(optimizer.param_groups)
             if loss_type == "正交保障":
                 self.para4TB.init_trans_matrix(k_points)
-        
-                optimizer = opt.SGD(self.para4TB.parameters(),lr=0.001, weight_decay=1e-5)
-                n_iter_band = 0
+                # optimizer = opt.Adam(self.para4TB.parameters(),lr=0.001, weight_decay=1e-5)
                 orth_error = loss
             elif loss_type == "特征值优化":
-                n_iter_band += 1
+                eig_loss_list.append(loss.item())
+                n_eig_loss += 1
             elif loss_type == "break":
                 params_values = torch.transpose(torch.stack([param.detach() for param in self.para4TB.para]),dim0=0,dim1=1)
                 print("完成优化，收敛，参数为：")
                 print(params_values)
                 break
             optimizer.zero_grad()  # 清除旧的梯度 
-            # loss.backward(retain_graph=True)       # 计算新的梯度
             loss.backward()
-            # for name, param in self.para4TB.named_parameters():
-            #     if param.grad is not None:
-            #         print(name, 'has gradient', param.grad)
-            #     else:
-            #         print(name, 'does not have gradient')
             optimizer.step()
 
+            if n_eig_loss > 1e4:
+                eig_end = torch.tensor(eig_loss_list[n_eig_loss-1000:n_eig_loss])
+                eig_mean = torch.mean(eig_end)
+                eig_centered = eig_end - eig_mean
+                if torch.norm(eig_centered) < 0.004:
+                    print("已收敛，重新迭代")
+                    params_values = torch.transpose(torch.stack([param.detach() for param in self.para4TB.para]),dim0=0,dim1=1)
+                    para_log.append(params_values)
+                    loss_log.append(eig_mean)
+                    random_para = torch.randn(1,15)
+                    self.para4TB.init_para(random_para)
+                    self.mask()
+                    
+                    optimizer = opt.Adam(self.para4TB.parameters(),lr=0.001)
+                    
+                    eig_loss_list = []
+                    n_eig_loss = 0
+            
             if i %1000 == 0:
                 params_values = torch.transpose(torch.stack([param.detach() for param in self.para4TB.para]),dim0=0,dim1=1)
                 # print(self.para4TB.para[0].grad)
                 print(i,loss_type,loss,params_values,orth_error)
-            
-            
+        if loss_type != "break":
+            print("完成共{}轮迭代".format(epoch),"推荐参数如下：")
+            for loss,para in zip(loss_log,para_log):
+                print("收敛loss为：",loss)
+                print(para)
+        
+
             
 from physics_property.band.band_data_in import BandDataIn
 import time
 if __name__ == "__main__":
     mask = [1,2,6,7,9,10,12]
-    mask = []
+    # mask = []
     para_train = Para4Band_train("/home/hp/users/kfh/DFTBAI1/example/test_TB/Si_like/Si_PC/Si_sps'.pkl",
-                              mask)
+                                 zero_index=mask,
+                              mask_index=mask)
     band_in = BandDataIn("/home/hp/users/kfh/DFTBAI1/example/test_TB/Si_like/Si_PC/BAND.dat")
     k_points = torch.tensor(band_in.content["k_vector"]).transpose(dim0=0,dim1=1)*2*torch.pi
     band_index = [1,2,3,4]
@@ -183,8 +204,7 @@ if __name__ == "__main__":
     model_index = [1,2,3,4]
     # para = torch.tensor([[1,0,0,1,1,1,0,0,1,0,0,1,0,1,1]],dtype=torch.float32)
     para = torch.randn(1,15)
-    for i in mask:
-        para[0,i] = 0
+
     # para = torch.tensor([[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]],dtype=torch.float32)
     # para = torch.tensor([[-4.2,0,0,6.6850,1.715,-8.3/4,0,0,-5.7292/4,0,0,-5.3749/4,0,1.715/4,4.575/4]],dtype=torch.float32)
     # para = torch.tensor([[-3.6794,  0.0000,  0.0000,  6.6766,  1.5710, -1.9928,  0.0000,  0.0000,-1.4614,  0.0000,  0.0000, -1.1135,  0.0000,  0.4030,  1.2013]])
