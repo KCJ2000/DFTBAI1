@@ -5,12 +5,12 @@ root_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(file
 sys.path.append(root_path)
 sys.path.append(os.path.join(root_path,"module"))
 
+import time
+import torch
 
-# from work.construct_model.construct_model import WorkFlow4construct_model
 from module.Hamiltonian.Hamiltonian4TB.tight_binding_hamiltonian import TBHamiltonian    
-# from DFTBAI.parameter.gradient_para.grad_parameter import Grad_Parameter
-# from test.test_band.band import Band
-
+from module.physics_property.band.band import Band
+from module.parameter.para4band.para4band import Para4Band_train
 
 model_input = {"sysinit":{
                             "sys_name":"Si_sps'",
@@ -27,23 +27,30 @@ model_input = {"sysinit":{
 tight_binding_model = TBHamiltonian(**model_input)
 print(tight_binding_model.sym_hamiltonian_dict)
 
-
-# work = WorkFlow4construct_model(file_path = "G:\\DFTBAI\\DFAITB1\\example\\test_TB\\",
-#                                 model_class=TBHamiltonian,
-#                                 model_input = model_input)
-
-
-# your_path = "/home/hp/users/kfh/DFTBAI1/example/test_TB/Si_like"
-# file_path = os.path.join(your_path,"Si_sps'.pkl")
-# data_file = os.path.join(your_path,"Si_PC/BAND.dat")
-# init_para = [-4.2,0,0,6.6850,1.715,-8.3/4,0,0,5.7292/4,0,0,5.3749/4,0,1.715/4,4.575/4]
-# init_para = [0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0]
-# # init_para = [[13.93145976  0.          0.         26.02521817 58.14195824  1.57600395
-# #    0.          0.          1.62123411  0.          0.          1.17487604
-# #    0.          3.55260717  3.56631498]]
 # mask = [1,2,6,7,9,10,12]
-# workflow = WorkFlow4construct_model(TBHamiltonian,file_path = file_path,read_file=True,
-#                                         optimizer=Grad_Parameter,physics_property=Band,data_file = data_file,
-#                                         init_para=init_para,choose_band=[0,1,2,3,4],mask=mask,out_period=200)
+# mask = []
+# # device = "cuda:1"
+# device = None
+# para_train = Para4Band_train("/home/hp/users/kfh/DFTBAI1/example/test_TB/Si_like/Si_PC/Si_sps'.pkl",
+#                               zero_index=mask,
+#                               mask_index=mask,
+#                               device=device)
+# band = Band()
+# band.get_data("/home/hp/users/kfh/DFTBAI1/example/test_TB/Si_like/Si_PC/BAND.dat")
+# k_points = torch.tensor(band.content["k_vector"]).transpose(dim0=0,dim1=1)*2*torch.pi
+# band_index = [1,2,3,4]
+# energy = torch.tensor(band.content["energy"][:,band_index])
+# model_index = [1,2,3,4]
+# # para = torch.tensor([[1,0,0,1,1,1,0,0,1,0,0,1,0,1,1]],dtype=torch.float32)
+# para = torch.randn(1,15)
 
+
+# start_time = time.time()
+# para_train.train(epoch = int(1e7),
+#                 k_points = k_points,
+#                 energy = energy,
+#                 model_index=model_index,
+#                 para=para)
+# end_time = time.time()
+# print(end_time-start_time)
 
