@@ -158,6 +158,8 @@ class orbit_spd_without_spin(orbit_spd):
             matrix = orbit_rot_dict[order]
             for index0 in list(basis_index_dict.keys()):
                 related_index = np.where(matrix[index0,:] != 0)[0]### 返回一个二阶array，我们只需要一阶的
+                if index0 not in related_index:
+                    related_index = np.append(related_index,index0) 
                 max_num = max([basis_index_dict[related_index0] for related_index0 in related_index if related_index0 in basis_index_dict.keys()])
                 for related_index0 in related_index:
                     if related_index0 not in basis_index_dict.keys():### 检查旋转矩阵中是否出现了原本设定中没有的轨道，并进行补全
@@ -177,6 +179,8 @@ class orbit_spd_without_spin(orbit_spd):
             matrix = orbit_rot_dict[order]
             for index0 in basis_index_dict.keys():
                 related_index = np.where(matrix[index0,:] != 0)[0]
+                if index0 not in related_index:
+                    related_index = np.append(related_index,index0) 
                 if order in related_dict.keys():
                     related_dict[order].append([self.orbit_trans_dict[order][related_index0] for related_index0 in related_index])
                 else:
