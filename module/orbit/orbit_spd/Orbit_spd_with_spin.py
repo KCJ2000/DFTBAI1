@@ -272,8 +272,8 @@ class orbit_spd_with_spin(orbit):
         """轨道加自旋，一共有多少个轨道，也就是所对应的matrix维数有多少"""
         return self.matrix_dim                 
                      
-                     
-                     
+    def __repr__(self):
+        return str(self.orbit_list)+str(self.spin_dict)                     
                      
                      
 import time
