@@ -83,7 +83,7 @@ class BandDataIn(FilesIn):
                 if reading_band:       
                     line = content[i].split()
                     if not with_spin:                    
-                        band0.append([float(line[0]),float(line[1])])
+                        band0.append([float(line[0]),float(line[1]),float(line[2])])
                 if 'Band-Index' in content[i]:
                     reading_band = True
                     band0 = [] 
@@ -101,9 +101,8 @@ class BandDataIn(FilesIn):
         for i in range(n_band):
             index_sort = np.argsort(band_data[i][:,0])
             band_data[i] = band_data[i][index_sort]
-        band_data = band_data[:,:,1]
         self.content["k_vector"] = k_path
-        self.content["energy"] = band_data.transpose()
+        self.content["energy"] = np.transpose(band_data,(1,0,2))[:,:,1:3]
             
     def __get_npz_content(self):
         """

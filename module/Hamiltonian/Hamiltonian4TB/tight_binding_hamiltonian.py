@@ -28,6 +28,7 @@ class TBHamiltonian(Hamiltonian):
         self.use_orbit_type = "not defined"
         self.periodicitysystem = PeriodicityPhysicsSystem(**sysinit)
         self.wyck = self.periodicitysystem.wyckoffpos
+        self.n_wyck = len(self.wyck)
         self.orbit_init = self.__check_model_init(orbit_init)
         
         self.orbit_init = orbit_init
@@ -36,7 +37,10 @@ class TBHamiltonian(Hamiltonian):
         self.orbit_list,self.orbit_rotation_list = self.get_orbit_rotation_list()
         print("atom_rep:",self.periodicitysystem.atom_rep)
         print("neighbour_table:",self.periodicitysystem.neighbour_table)
-        print("orbit_list",self.orbit_list)
+        for i in range(self.n_wyck):
+            print("orbit{}".format(i),self.orbit_list[i].tool)
+        print("lattice vector:",self.periodicitysystem.lattice.lattice_vector.subs(sysinit["lattice_parameter"]))
+        
 
         self.threshold = 1e-9
         self.unsym_dict = {}
@@ -336,7 +340,7 @@ class TBHamiltonian(Hamiltonian):
                 matrix = self.__equations_replace(equations,var_list,matrix)
                 print(self.statics_symbol(matrix))
             sym_hamiltonian[neighbour] = matrix
-                
+                  
         return sym_hamiltonian
     
     def __modify_symbols(self):
@@ -366,7 +370,8 @@ class TBHamiltonian(Hamiltonian):
             "info":{"sysinit":self.sysinit,"orbit_init":self.orbit_init},
             "model":self.sym_hamiltonian_dict,
             "num_symbols":self.num_symbols,
-            "name":self.name
+            "name":self.name,
+            "orbit_list":self.orbit_list
         }
         with open(file_name,"wb") as f:
             pickle.dump(content,f)

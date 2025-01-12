@@ -37,7 +37,7 @@ class Band(Property):
         band_out.save_content()
         
         
-    def plot_model(self,input_data,save_path,select_band):
+    def plot_model(self,input_data,save_path,select_band,colour = "b"):
         input_data = torch.tensor(input_data,dtype=torch.float64).transpose(dim0=0,dim1=1)*2*torch.pi
         input_data = input_data.to(self.para_calculate.device)
         if self.matrix_function != None:
@@ -51,21 +51,54 @@ class Band(Property):
             for i in range(eigens.shape[2]):
                 if i not in select_band:
                     continue
-                plt.plot(x,eigens[0,:,i])
+                plt.plot(x,eigens[0,:,i],colour)
             plt.savefig(save_path)
         else:
             raise AssertionError("还没初始化model,请先用init_calculate_model(model_path)初始化计算函数")
         
     
-    def plot_data(self,save_path,select_band):
-        print(self.content['k_vector'].shape)
-        print(self.content['energy'].shape)
+    def plot_data(self,save_path,select_band,colour="b"):
+        print("k_vector.shape",self.content['k_vector'].shape)
+        print("energy.shape",self.content['energy'].shape)
+        n_k_points = self.content["k_vector"].shape[0]
+        energy = self.content["energy"][:,select_band]
+        energy = energy.reshape(n_k_points,-1)
+        print("select_band.shape",select_band)
+        print("select_energy",energy.shape)
+        n_band = energy.shape[1]
         x = np.linspace(0,1,self.content["k_vector"].shape[0])
-        for band_index in select_band:
-            plt.plot(x,self.content["energy"][:,band_index])
+        for band_index in range(n_band):
+            plt.plot(x,energy[:,band_index],colour)
         plt.savefig(save_path)
         
 
+    def plot_compare(self,input_data,band_index,
+                     save_path,model_index):
+        ### 画DFT
+        n_k_points = self.content["k_vector"].shape[0]
+        energy = self.content["energy"][:,band_index]
+        energy = energy.reshape(n_k_points,-1)
+        n_band = energy.shape[1]
+        x = np.linspace(0,1,self.content["k_vector"].shape[0])
+        for band_index in range(n_band):
+            plt.scatter(x,energy[:,band_index],label='Hollow Circles', facecolors='none', edgecolors='r', s=15, linewidth=2)
+        
+        ### 画model
+        input_data = torch.tensor(input_data,dtype=torch.float64).transpose(dim0=0,dim1=1)*2*torch.pi
+        input_data = input_data.to(self.para_calculate.device)
+        if self.matrix_function != None:
+            matrix = self.matrix_function(input_data)
+            eigens,_ = torch.linalg.eig(matrix)
+            eigens = eigens.type(torch.float64)
+            eigens = torch.sort(eigens,dim=-1)[0].to("cpu")
+            eigens = eigens.detach().numpy()
+            for i in range(eigens.shape[2]):
+                if i not in model_index:
+                    continue
+                plt.plot(x,eigens[0,:,i],"b")            
+        plt.savefig(save_path)
+    
+    
 if __name__ == "__main__":
     band = Band()
     para_input = torch.tensor([[-2.6193,  0.0000,  0.0000,  3.8806,  2.3433, -0.9512,  0.0000,  0.0000,  -1.5930,  0.0000,  0.0000, -0.0275,  0.0000, -0.0144,  1.5422]])

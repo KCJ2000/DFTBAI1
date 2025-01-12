@@ -75,8 +75,9 @@ class Para4Band_train(ParaTB_train):
     def loss3(self,eigen_matrices,model_index,energy):
         eigens = torch.diagonal(eigen_matrices,dim1=-1,dim2=-2).type(torch.float32) ###Hermit矩阵实数特征值
         eigens = torch.sort(eigens,dim=-1)[0]
-        
         eigens = eigens[:,:,model_index]
+        
+        energy = torch.sort(energy,dim=-1)[0]
         energy = energy.repeat(eigens.shape[0],1,1)
         delta_energy = torch.abs(eigens-energy)
         loss1,_ = torch.topk(delta_energy,eigens.shape[0],dim=-1)
@@ -103,7 +104,8 @@ class Para4Band_train(ParaTB_train):
 
         
     def train(self,epoch,k_points,energy,model_index,
-              para=None):
+              para=None,
+              covergence_tolerance=0.04,max_iteration=5e5):
         """训练band的过程
 
         Args:
@@ -113,9 +115,9 @@ class Para4Band_train(ParaTB_train):
             band_index (_type_): 确定我们拟合的band对应第几个特征值
         """
         num_k_points = k_points.shape[1]
-        if energy.shape[0] != num_k_points and energy.shape[1] != len(band_index):
-            raise ValueError("输入的能级(energy)个数应该与k点个数相等,且与band_index个数相等,应输入({},{})型tensor,现在输入{}型tensor".format(num_k_points,
-                                                                                                                len(band_index),
+        if energy.shape[0] != num_k_points and energy.shape[1] != len(model_index):
+            raise ValueError("输入的能级(energy)个数应该与k点个数相等,且与model_index个数相等,应输入({},{})型tensor,现在输入{}型tensor".format(num_k_points,
+                                                                                                                len(model_index),
                                                                                                                 energy.shape))
         if energy.shape[1] > self.para4TB.matrix_dim:
             raise AssertionError("能带条数超出模型表达能力范围")
@@ -163,12 +165,12 @@ class Para4Band_train(ParaTB_train):
                 eig_end = torch.tensor(eig_loss_list[n_eig_loss-1000:n_eig_loss])
                 eig_mean = torch.mean(eig_end)
                 eig_centered = eig_end - eig_mean
-                if torch.norm(eig_centered) < 0.004:
+                if torch.norm(eig_centered) < covergence_tolerance:
                     print("已收敛，重新迭代")
                     params_values = torch.transpose(torch.stack([param.detach() for param in self.para4TB.para]),dim0=0,dim1=1)
                     para_log.append(params_values)
-                    loss_log.append(eig_mean)
-                    random_para = torch.randn(1,15)
+                    loss_log.append(("收敛",eig_mean))
+                    random_para = torch.randn(1,self.para4TB.num_symbols)
                     self.para4TB.init_para(random_para)
                     self.mask()
                     
@@ -176,7 +178,21 @@ class Para4Band_train(ParaTB_train):
                     
                     eig_loss_list = []
                     n_eig_loss = 0
-            
+                elif n_eig_loss > max_iteration:
+                    print("超出最大迭代")
+                    params_values = torch.transpose(torch.stack([param.detach() for param in self.para4TB.para]),dim0=0,dim1=1)
+                    para_log.append(params_values)
+                    loss_log.append(("超出最大迭代次数",eig_mean))
+                    random_para = torch.randn(1,self.para4TB.num_symbols)
+                    self.para4TB.init_para(random_para)
+                    self.mask()
+                    
+                    optimizer = opt.Adam(self.para4TB.parameters(),lr=0.001)
+                                        
+                    eig_loss_list = []
+                    n_eig_loss = 0
+                    
+                                        
             if i %1000 == 0:
                 params_values = torch.transpose(torch.stack([param.detach() for param in self.para4TB.para]),dim0=0,dim1=1)
                 # print(self.para4TB.para[0].grad)
