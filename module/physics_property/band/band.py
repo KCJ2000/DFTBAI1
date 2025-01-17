@@ -28,8 +28,7 @@ class Band(Property):
         
     def get_data(self,data_file_path):
         band_in = BandDataIn(file_path=data_file_path)
-        self.content["k_vector"] = band_in.content["k_vector"]
-        self.content["energy"] = band_in.content["energy"]
+        self.content = band_in.content
 
 
     def save_data(self,save_file_path):
@@ -37,7 +36,7 @@ class Band(Property):
         band_out.save_content()
         
         
-    def plot_model(self,input_data,save_path,select_band,colour = "b"):
+    def plot_model(self,input_data,save_path,select_band,colour = "b",kpath=None):
         input_data = torch.tensor(input_data,dtype=torch.float64).transpose(dim0=0,dim1=1)*2*torch.pi
         input_data = input_data.to(self.para_calculate.device)
         if self.matrix_function != None:
@@ -52,6 +51,28 @@ class Band(Property):
                 if i not in select_band:
                     continue
                 plt.plot(x,eigens[0,:,i],colour)
+            
+            if kpath:
+                pass
+            elif self.content != {}:
+                kpath = self.content["kpath"]
+            else:raise AssertionError("没有输入kpath,请输入")
+            
+            n_path = len(kpath)    
+            path_positions = np.linspace(0, 1, n_path + 1)
+            tick_labels = []
+            for i in range(n_path):
+                if i == 0:
+                    tick_labels.append(f"$"+kpath[i][0]+"$")
+                else:
+                    if kpath[i][0] == kpath[i-1][1]:
+                        tick_labels.append(f"$"+kpath[i][0]+"$")
+                    else:tick_labels.append(f"$"+kpath[i-1][1]+"|"+kpath[i][0]+"$")
+            tick_labels.append(kpath[-1][1])
+            plt.xticks(path_positions, tick_labels, rotation=0, ha='center')
+            plt.xlim(0,1)
+            for x in path_positions:
+                plt.axvline(x=x, color='k', linestyle='--', linewidth=1) 
             plt.savefig(save_path)
         else:
             raise AssertionError("还没初始化model,请先用init_calculate_model(model_path)初始化计算函数")
@@ -59,16 +80,33 @@ class Band(Property):
     
     def plot_data(self,save_path,select_band,colour="b"):
         print("k_vector.shape",self.content['k_vector'].shape)
-        print("energy.shape",self.content['energy'].shape)
         n_k_points = self.content["k_vector"].shape[0]
         energy = self.content["energy"][:,select_band]
         energy = energy.reshape(n_k_points,-1)
         print("select_band.shape",select_band)
+        print("energy.shape",energy.shape)
         print("select_energy",energy.shape)
         n_band = energy.shape[1]
         x = np.linspace(0,1,self.content["k_vector"].shape[0])
         for band_index in range(n_band):
             plt.plot(x,energy[:,band_index],colour)
+        
+        kpath = self.content['kpath']
+        n_path = len(kpath)
+        path_positions = np.linspace(0, 1, n_path + 1)
+        tick_labels = []
+        for i in range(n_path):
+            if i == 0:
+                tick_labels.append(f"$"+kpath[i][0]+"$")
+            else:
+                if kpath[i][0] == kpath[i-1][1]:
+                    tick_labels.append(f"$"+kpath[i][0]+"$")
+                else:tick_labels.append(f"$"+kpath[i-1][1]+"|"+kpath[i][0]+"$")
+        tick_labels.append(kpath[-1][1])
+        plt.xticks(path_positions, tick_labels, rotation=0, ha='center')
+        plt.xlim(0,1)
+        for x in path_positions:
+            plt.axvline(x=x, color='k', linestyle='--', linewidth=1)
         plt.savefig(save_path)
         
 
@@ -79,6 +117,7 @@ class Band(Property):
         energy = self.content["energy"][:,band_index]
         energy = energy.reshape(n_k_points,-1)
         n_band = energy.shape[1]
+        kpath = self.content['kpath']
         x = np.linspace(0,1,self.content["k_vector"].shape[0])
         for band_index in range(n_band):
             plt.scatter(x,energy[:,band_index],label='Hollow Circles', facecolors='none', edgecolors='r', s=15, linewidth=2)
@@ -95,7 +134,24 @@ class Band(Property):
             for i in range(eigens.shape[2]):
                 if i not in model_index:
                     continue
-                plt.plot(x,eigens[0,:,i],"b")            
+                plt.plot(x,eigens[0,:,i],"b")     
+                
+            
+            n_path = len(kpath)
+            path_positions = np.linspace(0, 1, n_path + 1)
+            tick_labels = []
+            for i in range(n_path):
+                if i == 0:
+                    tick_labels.append(f"$"+kpath[i][0]+"$")
+                else:
+                    if kpath[i][0] == kpath[i-1][1]:
+                        tick_labels.append(f"$"+kpath[i][0]+"$")
+                    else:tick_labels.append(f"$"+kpath[i-1][1]+"|"+kpath[i][0]+"$")
+            tick_labels.append(kpath[-1][1])
+            plt.xticks(path_positions, tick_labels, rotation=0, ha='center')
+            plt.xlim(0,1)
+            for x in path_positions:
+                plt.axvline(x=x, color='k', linestyle='--', linewidth=1)
         plt.savefig(save_path)
     
     
