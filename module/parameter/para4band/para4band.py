@@ -80,8 +80,9 @@ class Para4Band_train(ParaTB_train):
         energy = torch.sort(energy,dim=-1)[0]
         energy = energy.repeat(eigens.shape[0],1,1)
         delta_energy = torch.abs(eigens-energy)
-        loss1,_ = torch.topk(delta_energy,eigens.shape[0],dim=-1)
-        loss = torch.mean(delta_energy) + torch.mean(loss1)
+        delta_energy = torch.flatten(delta_energy)
+        loss1,_ = torch.topk(delta_energy,eigens.shape[0]*eigens.shape[1],dim=-1)
+        loss = torch.mean(loss1) + torch.mean(delta_energy)
         return loss
     
     def loss(self,input_data,model_index,energy,eye_matrices):
