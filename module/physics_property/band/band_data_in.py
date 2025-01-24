@@ -101,6 +101,8 @@ class BandDataIn(FilesIn):
         for i in range(n_band):
             index_sort = np.argsort(band_data[i][:,0])
             band_data[i] = band_data[i][index_sort]
+        self.content["n_kpoint"] = n_kpoint
+        self.content["kpath"] = Kpath
         self.content["k_vector"] = k_path
         self.content["energy"] = np.transpose(band_data,(1,0,2))[:,:,1:3]
             
@@ -119,7 +121,8 @@ class BandDataIn(FilesIn):
         
         
 if __name__ == "__main__":
-    band_in = BandDataIn("/home/hp/users/kfh/DFTBAI1/example/test_TB/Si_like/Si_PC/BAND.dat")
+    # band_in = BandDataIn("/home/hp/users/kfh/DFTBAI1/example/test_TB/Si_like/Si_PC/BAND.dat")
+    band_in = BandDataIn("/home/hp/users/kfh/DFTBAI1/example/BAND-total/Fe-fm/BAND.dat")
     print(band_in.content["k_vector"].shape)
     print(band_in.content['energy'].shape)
     print(band_in.content["energy"][:,4])

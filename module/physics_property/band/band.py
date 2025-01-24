@@ -120,7 +120,7 @@ class Band(Property):
         kpath = self.content['kpath']
         x = np.linspace(0,1,self.content["k_vector"].shape[0])
         for band_index in range(n_band):
-            plt.scatter(x,energy[:,band_index],label='Hollow Circles', facecolors='none', edgecolors='r', s=15, linewidth=2)
+            plt.scatter(x,energy[:,band_index],label='Hollow Circles', facecolors='none', edgecolors='r', s=13, linewidth=1.5)
         
         ### 画model
         input_data = torch.tensor(input_data,dtype=torch.float64).transpose(dim0=0,dim1=1)*2*torch.pi
