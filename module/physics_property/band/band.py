@@ -111,7 +111,8 @@ class Band(Property):
         
 
     def plot_compare(self,input_data,band_index,
-                     save_path,model_index):
+                     save_path,model_index,
+                     title):
         ### 画DFT
         n_k_points = self.content["k_vector"].shape[0]
         energy = self.content["energy"][:,band_index]
@@ -120,7 +121,7 @@ class Band(Property):
         kpath = self.content['kpath']
         x = np.linspace(0,1,self.content["k_vector"].shape[0])
         for band_index in range(n_band):
-            plt.scatter(x,energy[:,band_index],label='Hollow Circles', facecolors='none', edgecolors='r', s=13, linewidth=1.5)
+            scatter = plt.scatter(x,energy[:,band_index],label='Hollow Circles', facecolors='none', edgecolors='r', s=13, linewidth=1.5)
         
         ### 画model
         input_data = torch.tensor(input_data,dtype=torch.float64).transpose(dim0=0,dim1=1)*2*torch.pi
@@ -134,24 +135,34 @@ class Band(Property):
             for i in range(eigens.shape[2]):
                 if i not in model_index:
                     continue
-                plt.plot(x,eigens[0,:,i],"b")     
-                
+                line, = plt.plot(x,eigens[0,:,i],"b")     
             
             n_path = len(kpath)
             path_positions = np.linspace(0, 1, n_path + 1)
             tick_labels = []
+            
+            for i in range(n_path):
+                if kpath[i][0] == "GAMMA":
+                    kpath[i][0] = "\Gamma"
+                if kpath[i][1] == "GAMMA":
+                    kpath[i][1] = "\Gamma"
+            
             for i in range(n_path):
                 if i == 0:
-                    tick_labels.append(f"$"+kpath[i][0]+"$")
+                    tick_labels.append(r"$"+kpath[i][0]+"$")
                 else:
                     if kpath[i][0] == kpath[i-1][1]:
-                        tick_labels.append(f"$"+kpath[i][0]+"$")
-                    else:tick_labels.append(f"$"+kpath[i-1][1]+"|"+kpath[i][0]+"$")
+                        tick_labels.append(r"$"+kpath[i][0]+"$")
+                    else:tick_labels.append(r"$"+kpath[i-1][1]+"|"+kpath[i][0]+"$")
             tick_labels.append(kpath[-1][1])
             plt.xticks(path_positions, tick_labels, rotation=0, ha='center')
             plt.xlim(0,1)
-            for x in path_positions:
+            for x in path_positions:### 画竖直虚线
                 plt.axvline(x=x, color='k', linestyle='--', linewidth=1)
+        
+        plt.ylabel(r"$E_g(eV)$")
+        plt.legend(handles=[line, scatter],labels=["TB model","DFT"])
+        plt.title(title)
         plt.savefig(save_path)
     
     
