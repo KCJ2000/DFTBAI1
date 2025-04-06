@@ -35,6 +35,28 @@ class Band(Property):
         band_out = BandDataOut(file_path=save_file_path,content=self.content)
         band_out.save_content()
         
+    def calculate_band(self,kpoints,klabels,nkpoints):    
+        if self.matrix_function == None:
+            raise AssertionError("请初始化model")
+        n_k = len(kpoints)
+        input_data = []
+        klabel = []
+        for i in range(n_k-1):
+            input_data.append(torch.stack([torch.linspace(s, e, nkpoints) for s, e in zip(kpoints[i], kpoints[i+1])], dim=0))
+            klabel.append([klabels[i],klabels[i+1]])
+        input_data = torch.cat(input_data,dim=-1)*2*torch.pi
+        input_data = input_data.to(self.para_calculate.device).to(torch.double)
+        matrix = self.matrix_function(input_data)
+        eigens,_ = torch.linalg.eig(matrix)
+        eigens = eigens.type(torch.float64)
+        eigens = torch.sort(eigens,dim=-1)[0].to("cpu")
+        eigens = eigens[0]
+        eigens = eigens.detach().numpy()
+        input_data = input_data/2/torch.pi
+        input_data = input_data.transpose(dim0=-1,dim1=-2)
+        input_data = input_data.to("cpu").detach().numpy()
+        self.content = {"k_vector":input_data,"n_kpoint":kpoints,"kpath":klabel,"energy":eigens}
+        
         
     def plot_model(self,input_data,save_path,select_band,colour = "b",kpath=None):
         input_data = torch.tensor(input_data,dtype=torch.float64).transpose(dim0=0,dim1=1)*2*torch.pi
@@ -61,6 +83,13 @@ class Band(Property):
             n_path = len(kpath)    
             path_positions = np.linspace(0, 1, n_path + 1)
             tick_labels = []
+            
+            for i in range(n_path):
+                if kpath[i][0] == "GAMMA":
+                    kpath[i][0] = '\Gamma'
+                if kpath[i][1] == "GAMMA":
+                    kpath[i][1] = '\Gamma'
+
             for i in range(n_path):
                 if i == 0:
                     tick_labels.append(f"$"+kpath[i][0]+"$")
@@ -68,7 +97,7 @@ class Band(Property):
                     if kpath[i][0] == kpath[i-1][1]:
                         tick_labels.append(f"$"+kpath[i][0]+"$")
                     else:tick_labels.append(f"$"+kpath[i-1][1]+"|"+kpath[i][0]+"$")
-            tick_labels.append(kpath[-1][1])
+            tick_labels.append(f"$"+kpath[-1][1]+"$")
             plt.xticks(path_positions, tick_labels, rotation=0, ha='center')
             plt.xlim(0,1)
             for x in path_positions:

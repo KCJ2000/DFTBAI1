@@ -68,7 +68,7 @@ class BandDataIn(FilesIn):
                     kpath = np.concatenate((kpath,np.linspace(start_point,end_point,n_kpoint)),axis=0)
             return kpath
                                 
-        def get_band(file,with_spin=False):
+        def get_band(file):
             band = []
             content = file.readlines()
             n_lines = len(content)
@@ -82,8 +82,10 @@ class BandDataIn(FilesIn):
                     band.append(band0)
                 if reading_band:       
                     line = content[i].split()
-                    if not with_spin:                    
+                    try:                    ### 按有自旋的文件读取
                         band0.append([float(line[0]),float(line[1]),float(line[2])])
+                    except:                 ### 按没有自旋的文件读取
+                        band0.append([float(line[0]),float(line[1])])
                 if 'Band-Index' in content[i]:
                     reading_band = True
                     band0 = [] 
@@ -115,7 +117,8 @@ class BandDataIn(FilesIn):
         with np.load(self.file_path) as data:
             self.content["k_vector"] = data["k_vector"]
             self.content["energy"] = data["energy"]
-        
+            self.content["kpath"] = data["kpath"].tolist()
+            self.content["n_kpoint"] = data["n_kpoint"]
         
         
         

@@ -200,6 +200,12 @@ class Para4Band_train(ParaTB_train):
                 print(i,loss_type,loss,params_values,orth_error)
         if loss_type != "break":
             print("完成共{}轮迭代".format(epoch),"推荐参数如下：")
+            ### 给loss排序后输出
+            loss_values = torch.tensor([loss_value for loss_type,loss_value in loss_log])
+            loss_values,sort_index = torch.sort(loss_values)
+            sort_index = [t_value.item() for t_value in sort_index]
+            loss_log = [loss_log[index] for index in sort_index]
+            para_log = [para_log[index] for index in sort_index]
             for loss,para in zip(loss_log,para_log):
                 print("收敛loss为：",loss)
                 print(para)
