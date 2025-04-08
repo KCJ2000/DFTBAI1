@@ -15,17 +15,17 @@ from module.physics_property.band.band import Band
 
 
 model_input = {"sysinit":{
-                            "sys_name":"GaAs_spd_spd_5n",
+                            "sys_name":"GaAs_s3p2_s3p2_4n",
                             "group_type":"Space Group",
                             "group_name":"216",
                             "lattice_type":"CubiFace",
                             "lattice_parameter":{"a":1},
                             "atompos":[[0,0,0],[0.25,0.25,0.25]],
                             # "magdirect":[[1,1,0]],
-                            "neighbour_list":[5,5]
+                            "neighbour_list":[4,4]
                             },
-            "orbit_init":[{"orbit_list":["s","px","py","pz","dxy","dz2","dyz","dxz","dx2-y2"]},
-                          {"orbit_list":["s","px","py","pz","dxy","dyz","dxz","dz2","dx2-y2"]}]
+            "orbit_init":[{"orbit_list":["s","px","py","pz","s","px","py","pz","s"]},
+                          {"orbit_list":["s","px","py","pz","s","px","py","pz","s"]}]
             }
 model = TBHamiltonian(**model_input)
 model.save_model("/home/hp/users/kfh/DFTBAI1/example/test_TB/GaAs")
@@ -62,7 +62,7 @@ print("neighbour_list",model_input["sysinit"]["neighbour_list"])
 para = None
 
 start_time = time.time()
-para_train.train(epoch = int(1e6),
+para_train.train(epoch = int(1e7),
                 k_points = k_points,
                 energy = energy,
                 model_index=model_index,

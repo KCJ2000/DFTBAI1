@@ -1,0 +1,9 @@
+output.log是GaAs_spd_spd_5n模型
+output2.log是GaAs_spd_spd_3n模型
+output3.log是GaAs_spd_spd_4n模型
+output4.log是GaAs_spd_spd_6n模型
+output5.log是GaAs_spd_spd_7n模型
+output6.log是GaAs_spd_spd_8n模型
+output7.log是GaAs_s3p2_s3p2_5n模型
+output8.log是GaAs_s3p2_s3p2_3n模型
+output9.log是GaAs_s3p2_s3p2_4n模型

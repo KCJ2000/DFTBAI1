@@ -15,17 +15,17 @@ from module.physics_property.band.band import Band
 
 
 model_input = {"sysinit":{
-                            "sys_name":"MgO_spd_sp_6n ",
+                            "sys_name":"MgO_s2p2_s2p_6n",
                             "group_type":"Space Group",
                             "group_name":"225",
                             "lattice_type":"CubiFace",
                             "lattice_parameter":{"a":1},
                             "atompos":[[0,0,0],[0.5,0.5,0.5]],
                             # "magdirect":[[1,1,0]],
-                            "neighbour_list":[5,5]
+                            "neighbour_list":[6,6]
                             },
-            "orbit_init":[{"orbit_list":["s","px","py","pz","dxy"]},
-                          {"orbit_list":["s","px","py","pz"]}]
+            "orbit_init":[{"orbit_list":["s","s","px","py","pz","px","py","pz"]},
+                          {"orbit_list":["s","s","px","py","pz"]}]
             }
 model = TBHamiltonian(**model_input)
 model.save_model("/home/hp/users/kfh/DFTBAI1/example/test_TB/MgO")
@@ -49,9 +49,9 @@ para_train = Para4Band_train(model_path,
 band = Band()
 band.get_data("/home/hp/users/kfh/DFTBAI1/example/BAND-total/MgO/BAND.dat")
 k_points = torch.tensor(band.content["k_vector"]).transpose(dim0=0,dim1=1)*2*torch.pi
-band_index = [11,12,13,14,15,16,17,18]
+band_index = [7,8,9,10,11,12,13,14,15,16,17,18,19]
 energy = torch.tensor(band.content["energy"][:,band_index,0].reshape(k_points.shape[1],-1))
-model_index = [0,1,2,3,4,5,6,7]
+model_index = [i for i in range(13)]
 
 print("band_index:",band_index)
 print("model_index:",model_index)
@@ -62,7 +62,7 @@ print("neighbour_list",model_input["sysinit"]["neighbour_list"])
 para = None
 
 start_time = time.time()
-para_train.train(epoch = int(1e7),
+para_train.train(epoch = int(1e6),
                 k_points = k_points,
                 energy = energy,
                 model_index=model_index,

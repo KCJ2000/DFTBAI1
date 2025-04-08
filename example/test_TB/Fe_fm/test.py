@@ -15,14 +15,14 @@ from module.physics_property.band.band import Band
 
 
 model_input = {"sysinit":{
-                            "sys_name":"Fe_fm_pd_4neighbour",
+                            "sys_name":"Fe_fm_pd_5neighbour",
                             "group_type":"Magnetic Group",
                             "group_name":"139.537",
                             "lattice_type":"TetrBody",
                             "lattice_parameter":{"a":1,"c":1},
                             "atompos":[[0,0,0]],
                             "magdirect":[[1,1,0]],
-                            "neighbour_list":[4]
+                            "neighbour_list":[5]
                             },
             "orbit_init":[{"orbit_list":["px","py","pz","dxz","dz2","dx2-y2","dxy"],"spin_dict":{"px":1,"py":1,"pz":1,"dz2":1,"dxz":1,"dxy":1,"dx2-y2":1}}]}
 model = TBHamiltonian(**model_input)
@@ -33,12 +33,12 @@ print(model.sym_hamiltonian_dict)
 # mask = [1,3,7,9]
 # mask = [1,3,7,9,14,16,18,20,23,25,27,29]
 mask = []
-device = "cuda:1"
+device = "cuda:0"
 # device = None
 # device = "cpu"
 model_path = "/home/hp/users/kfh/DFTBAI1/example/test_TB/Fe_fm/Fe_fm.pkl"
 model_path = "/home/hp/users/kfh/DFTBAI1/example/test_TB/Fe_fm/Fe_fm_6neighbour.pkl"
-model_path = "/home/hp/users/kfh/DFTBAI1/example/test_TB/Fe_fm/Fe_fm_pd_4neighbour.pkl"
+model_path = "/home/hp/users/kfh/DFTBAI1/example/test_TB/Fe_fm/Fe_fm_pd_5neighbour.pkl"
 para_train = Para4Band_train(model_path,
                               zero_index=mask,
                               mask_index=mask,

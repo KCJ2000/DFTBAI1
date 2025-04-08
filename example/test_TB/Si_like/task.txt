@@ -1,0 +1,2 @@
+output3.log是Si_sps',全参数优化
+output4.log是Si_sps',mask = [1,2,6,7,9,10,12]

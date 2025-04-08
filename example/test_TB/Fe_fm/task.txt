@@ -1,0 +1,2 @@
+output.log 是 Fe_fm_pd_4neighbour.pkl
+output1.log 是 Fe_fm_pd_5neighbour

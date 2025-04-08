@@ -36,9 +36,9 @@ model_input = {"sysinit":{
                             },
             "orbit_init":[{"orbit_list":["pz"]}]}
 
-# tight_binding_model = TBHamiltonian(**model_input)
-# tight_binding_model.save_model("/home/hp/users/kfh/DFTBAI1/example/test_TB/graphene")
-
+tight_binding_model = TBHamiltonian(**model_input)
+tight_binding_model.save_model("/home/hp/users/kfh/DFTBAI1/example/test_TB/graphene")
+print(tight_binding_model.sym_hamiltonian_dict)
 
 ### 训练
 mask = []
@@ -50,8 +50,7 @@ band = Band()
 band.get_data("/home/hp/users/kfh/DFTBAI1/example/test_TB/graphene/band.npz")
 k_points = torch.tensor(band.content["k_vector"]).transpose(dim0=0,dim1=1)*2*torch.pi
 band_index = [0,1]
-energy = torch.tensor(band.content["energy"][:,band_index])
-
+energy = torch.tensor(band.content["energy"].reshape(k_points.shape[1],-1))
 model_index = [0,1]
 
 para = torch.randn(1,3)

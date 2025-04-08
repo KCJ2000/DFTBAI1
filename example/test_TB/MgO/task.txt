@@ -1,0 +1,8 @@
+output8.log是spd5_sp_6neighbour的模型,13dim
+output7.log是spd5_ssp_5neighbour的模型,14dim
+output9.log是spd5_ssp_6neighbour的模型,14dim
+outpur10.log是s2p2_s2p_6neighbour的模型，2+3*2+2+3=13dim
+
+spd5_sp_6neighbour和spd5_ssp_6neighbour的对比说明轨道数量的对比
+spd5_ssp_5neighbour和spd5_ssp_5neighbour的对比说明近邻截断的作用
+s2p2_s2p_6neighbour和spd5_sp_6neighbour的对比说明轨道的选择十分重要
