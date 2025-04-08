@@ -1,0 +1,110 @@
+graph LR
+        subgraph ide1[ ]
+        %% TBHamiltonian[(TBHamiltonian)]
+        %% Hamiltonian[(Hamiltonian)]
+        %% Matrix_Ele[(Matrix_Ele)]
+        %% PeriodicityPhysicsSystem[(PeriodicityPhysicsSystem)]
+        %% orbit_spd_manager[(orbit_spd_manager)]
+        %% SymmetryConstrainedHamiltonian[(Symmetry Constrained Hamiltonian)]
+        
+
+        %% bravaislattice[(bravaislattice)]
+        class lattice interfaceStyle
+        Bravais_Lattice_Jones_json[(Bravais_Lattice_Jones.json)]
+        Bravais_Lattice_Vector_json[(Bravais_Lattice_Vector.json)]
+
+        %% orbit_spd[(orbit_spd)]
+        %% orbit[(orbit)]
+        %% orbit_spd_without_spin[(orbit_spd_without_spin)]
+        %% orbit_spd_with_spin[(orbit_spd_with_spin)]
+        orbit_rep_table_json[(orbit_rep_table.json)]
+        %% SpaceGroupOp[(SpaceGroupOp)]
+        %% MagneticGroupOp[(MagneticGroupOp)]
+
+        %% Band[(Band)]
+        %% Property[(Property)]
+
+        %% Phy_Sys[(Phy_Sys)]
+        Bravais_symop_table_json[(Bravais_symop_table.json)]
+        Bravais2sgno_json[(Bravais2sgno.json)]
+        Crystall2point_group_json[(Crystall2point_group.json)]
+
+        %% SymOp[(SymOp)]
+        %% PointGroupOp[(PointGroupOp)]
+        Space_Group_json[(Space_Group.json)]
+        Magnetic_Group_json[(Magnetic_Group.json)]
+
+        Hamiltonian:::interfaceStyle -->|inherit| TBHamiltonian
+        Matrix_Ele -->|use| TBHamiltonian
+        PeriodicityPhysicsSystem -->|use| TBHamiltonian
+        orbit_spd_manager -->|use| TBHamiltonian
+
+   
+
+        lattice:::interfaceStyle -->|inherit| bravaislattice
+        Bravais_Lattice_Jones_json -->|rely| bravaislattice
+        Bravais_Lattice_Vector_json -->|rely| bravaislattice
+
+        orbit -->|inherit| orbit_spd
+        orbit_spd -->|inherit| orbit_spd_without_spin
+        orbit_rep_table_json -->|rely| orbit_spd_without_spin
+        SpaceGroupOp -->|use| orbit_spd_without_spin
+        orbit:::interfaceStyle -->|inherit| orbit_spd_with_spin
+        orbit_spd_without_spin -->|use| orbit_spd_with_spin
+        MagneticGroupOp -->|use| orbit_spd_with_spin
+
+        orbit_spd_without_spin -->|manage| orbit_spd_manager
+        orbit_spd_with_spin -->|manage| orbit_spd_manager
+
+        Property:::interfaceStyle -->|inherit| Band
+
+        Phy_Sys:::interfaceStyle -->|inherit| PeriodicityPhysicsSystem
+        Bravais_symop_table_json -->|rely| PeriodicityPhysicsSystem
+        Bravais2sgno_json -->|rely| PeriodicityPhysicsSystem
+        Crystall2point_group_json -->|rely| PeriodicityPhysicsSystem
+        bravaislattice -->|use| PeriodicityPhysicsSystem
+        SpaceGroupOp -->|use| PeriodicityPhysicsSystem
+        MagneticGroupOp -->|use| PeriodicityPhysicsSystem
+
+        SymOp:::interfaceStyle -->|inherit| SpaceGroupOp
+        PointGroupOp -->|use| SpaceGroupOp
+        Space_Group_json -->|rely| SpaceGroupOp
+
+        SymOp -->|inherit| PointGroupOp
+
+        SymOp -->|inherit| MagneticGroupOp
+        SpaceGroupOp -->|use| MagneticGroupOp
+        Magnetic_Group_json -->|rely| MagneticGroupOp
+        TBHamiltonian -->|generate| SymmetryConstrainedHamiltonian:::HamiltonianForm
+        end
+
+
+        pkl_file[(pkl_file)]
+        SymmetryConstrainedHamiltonian -->|save| pkl_file:::middleFile
+        pkl_file -->|input| Para4Band_train
+    
+           
+        subgraph ide2[ ]
+        
+        ParaTB_train:::interfaceStyle -->|inherit| Para4Band_train
+        ParaTB:::interfaceStyle -->|inherit| Para4Band
+        Para4Band -->|use| Para4Band_train
+        Band -->|input| Para4Band_train
+        end
+        subgraph ide3[ ]
+        
+        FilesIn:::interfaceStyle -->|inherit| BandDataIn
+        FilesOut:::interfaceStyle -->|inherit| BandDataOut
+        BandDataIn -->|use| Band
+        BandDataOut -->|use| Band
+        end
+
+        classDef interfaceStyle fill:#f96,stroke-width:2px
+        classDef middleFile fill:#fff
+        classDef HamiltonianForm fill:#fff,stroke-width:5px,stroke:#333
+
+
+
+
+
+
