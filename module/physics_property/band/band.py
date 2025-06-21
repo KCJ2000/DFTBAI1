@@ -40,13 +40,14 @@ class Band(Property):
             raise AssertionError("请初始化model")
         n_k = len(kpoints)
         input_data = []
-        klabel = []
+        kpath = []
         for i in range(n_k-1):
             input_data.append(torch.stack([torch.linspace(s, e, nkpoints) for s, e in zip(kpoints[i], kpoints[i+1])], dim=0))
-            klabel.append([klabels[i],klabels[i+1]])
+            kpath.append([klabels[i],klabels[i+1]])
         input_data = torch.cat(input_data,dim=-1)*2*torch.pi
         input_data = input_data.to(self.para_calculate.device).to(torch.double)
         matrix = self.matrix_function(input_data)
+        print(matrix.shape)
         eigens,_ = torch.linalg.eig(matrix)
         eigens = eigens.type(torch.float64)
         eigens = torch.sort(eigens,dim=-1)[0].to("cpu")
@@ -55,7 +56,7 @@ class Band(Property):
         input_data = input_data/2/torch.pi
         input_data = input_data.transpose(dim0=-1,dim1=-2)
         input_data = input_data.to("cpu").detach().numpy()
-        self.content = {"k_vector":input_data,"n_kpoint":kpoints,"kpath":klabel,"energy":eigens}
+        self.content = {"k_vector":input_data,"n_kpoint":nkpoints,"kpath":kpath,"energy":eigens}
         
         
     def plot_model(self,input_data,save_path,select_band,colour = "b",kpath=None):
@@ -131,7 +132,7 @@ class Band(Property):
                 if kpath[i][0] == kpath[i-1][1]:
                     tick_labels.append(f"$"+kpath[i][0]+"$")
                 else:tick_labels.append(f"$"+kpath[i-1][1]+"|"+kpath[i][0]+"$")
-        tick_labels.append(kpath[-1][1])
+        tick_labels.append(f"$"+kpath[-1][1]+"$")
         plt.xticks(path_positions, tick_labels, rotation=0, ha='center')
         plt.xlim(0,1)
         for x in path_positions:
