@@ -1,2 +1,3 @@
 output3.log是Si_sps',全参数优化
 output4.log是Si_sps',mask = [1,2,6,7,9,10,12]
+output7_20.log是Si_sps'_3n的全参数优化

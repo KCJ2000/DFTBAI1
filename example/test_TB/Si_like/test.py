@@ -13,46 +13,45 @@ from module.physics_property.band.band import Band
 from module.parameter.para4band.para4band import Para4Band_train
 
 model_input = {"sysinit":{
-                            "sys_name":"Si_sps'",
+                            "sys_name":"Si_sps'_4n",
                             "group_type":"Space Group",
                             "group_name":"227",
                             "lattice_type":"CubiFace",
                             "lattice_parameter":{"a":1},
                             "atompos":[[1/8,1/8,1/8]],
                             # "magdirect":[[0,0,0]],
-                            "neighbour_list":[2]
+                            "neighbour_list":[4]
                             },
             "orbit_init":[{"orbit_list":["s","s","px","py","pz"]}]}
 
-tight_binding_model = TBHamiltonian(**model_input)
-tight_binding_model.save_model("/home/hp/users/kfh/DFTBAI1/example/test_TB/Si_like/Si_PC")
-print(tight_binding_model.sym_hamiltonian_dict)
+# tight_binding_model = TBHamiltonian(**model_input)
+# tight_binding_model.save_model("/data/home/kongfh/DFTBAI1/example/test_TB/Si_like/Si_PC")
+# print(tight_binding_model.sym_hamiltonian_dict)
 
 # mask = [1,2,6,7,9,10,12]
 mask = []
-device = "cuda:1"
+device = "cuda:0"
 device = None
-para_train = Para4Band_train("/home/hp/users/kfh/DFTBAI1/example/test_TB/Si_like/Si_PC/Si_sps'.pkl",
+para_train = Para4Band_train("/data/home/kongfh/DFTBAI1/example/test_TB/Si_like/Si_PC/Si_sps'_4n.pkl",
                               zero_index=mask,
                               mask_index=mask,
                               device=device)
 band = Band()
-band.get_data("/home/hp/users/kfh/DFTBAI1/example/test_TB/Si_like/Si_PC/BAND.dat")
+band.get_data("/data/home/kongfh/DFTBAI1/example/test_TB/Si_like/Si_PC/BAND.dat")
 k_points = torch.tensor(band.content["k_vector"]).transpose(dim0=0,dim1=1)*2*torch.pi
 band_index = [1,2,3,4]
 energy = torch.tensor(band.content["energy"][:,band_index,0])
 model_index = [1,2,3,4]
 # para = torch.tensor([[1,0,0,1,1,1,0,0,1,0,0,1,0,1,1]],dtype=torch.float32)
-para = torch.randn(1,15)
-for i in mask:
-    para[0,i] = 0
+# para = torch.randn(1,15)
+# for i in mask:
+#     para[0,i] = 0
 
 start_time = time.time()
-para_train.train(epoch = int(1e6),
+para_train.train_Stiefel(epoch = int(1e6),
                 k_points = k_points,
                 energy = energy,
-                model_index=model_index,
-                para=para)
+                model_index=model_index)
 end_time = time.time()
 print(end_time-start_time)
 

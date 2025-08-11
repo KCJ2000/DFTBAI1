@@ -15,31 +15,29 @@ from module.physics_property.band.band import Band
 
 
 model_input = {"sysinit":{
-                            "sys_name":"MgO_s2p2_s2p_6n",
+                            "sys_name":"MgO_spd_sp2_7n",
                             "group_type":"Space Group",
                             "group_name":"225",
                             "lattice_type":"CubiFace",
                             "lattice_parameter":{"a":1},
                             "atompos":[[0,0,0],[0.5,0.5,0.5]],
                             # "magdirect":[[1,1,0]],
-                            "neighbour_list":[6,6]
+                            "neighbour_list":[7,7]
                             },
-            "orbit_init":[{"orbit_list":["s","s","px","py","pz","px","py","pz"]},
-                          {"orbit_list":["s","s","px","py","pz"]}]
+            "orbit_init":[{"orbit_list":["s","px","py","pz","dxy","dyz","dxz","dz2","dx2-y2"]},
+                          {"orbit_list":["s","px","py","pz","px","py","pz"]}]
             }
-model = TBHamiltonian(**model_input)
-model.save_model("/home/hp/users/kfh/DFTBAI1/example/test_TB/MgO")
-print(model.sym_hamiltonian_dict)
+# model = TBHamiltonian(**model_input)
+# model.save_model("/data/home/kongfh/DFTBAI1/example/test_TB/MgO")
+# print(model.sym_hamiltonian_dict)
 
 
-# mask = [1,3,7,9]
-# mask = [1,3,7,9,14,16,18,20,23,25,27,29]
 mask = []
-device = "cuda:1"
+device = "cuda:0"
 # device = None
 # device = "cpu"
 
-model_path = "/home/hp/users/kfh/DFTBAI1/example/test_TB/MgO"
+model_path = "/data/home/kongfh/DFTBAI1/example/test_TB/MgO"
 model_path = os.path.join(model_path,model_input["sysinit"]["sys_name"]+".pkl")
 
 para_train = Para4Band_train(model_path,
@@ -47,11 +45,11 @@ para_train = Para4Band_train(model_path,
                               mask_index=mask,
                               device=device)
 band = Band()
-band.get_data("/home/hp/users/kfh/DFTBAI1/example/BAND-total/MgO/BAND.dat")
+band.get_data("/data/home/kongfh/DFTBAI1/example/BAND-total/MgO/BAND.dat")
 k_points = torch.tensor(band.content["k_vector"]).transpose(dim0=0,dim1=1)*2*torch.pi
-band_index = [7,8,9,10,11,12,13,14,15,16,17,18,19]
+band_index = [i for i in range(4,20)]
 energy = torch.tensor(band.content["energy"][:,band_index,0].reshape(k_points.shape[1],-1))
-model_index = [i for i in range(13)]
+model_index = [i for i in range(16)]
 
 print("band_index:",band_index)
 print("model_index:",model_index)
@@ -66,6 +64,7 @@ para_train.train(epoch = int(1e6),
                 k_points = k_points,
                 energy = energy,
                 model_index=model_index,
+                max_iteration = 5e4,
                 para=para)
 end_time = time.time()
 print(end_time-start_time)
