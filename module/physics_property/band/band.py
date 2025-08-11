@@ -150,15 +150,15 @@ class Band(Property):
         n_band = energy.shape[1]
         kpath = self.content['kpath']
         x = np.linspace(0,1,self.content["k_vector"].shape[0])
-        for band_index in range(n_band):
-            scatter = plt.scatter(x,energy[:,band_index],label='Hollow Circles', facecolors='none', edgecolors='r', s=13, linewidth=1.5)
+        for i in range(n_band):
+            scatter = plt.scatter(x,energy[:,i],label='Hollow Circles', facecolors='none', edgecolors='r', s=13, linewidth=1.5)
         
         ### 画model
         input_data = torch.tensor(input_data,dtype=torch.float64).transpose(dim0=0,dim1=1)*2*torch.pi
         input_data = input_data.to(self.para_calculate.device)
         if self.matrix_function != None:
             matrix = self.matrix_function(input_data)
-            eigens,_ = torch.linalg.eig(matrix)
+            eigens,_ = torch.linalg.eigh(matrix)
             eigens = eigens.type(torch.float64)
             eigens = torch.sort(eigens,dim=-1)[0].to("cpu")
             eigens = eigens.detach().numpy()
@@ -190,11 +190,19 @@ class Band(Property):
             for x in path_positions:### 画竖直虚线
                 plt.axvline(x=x, color='k', linestyle='--', linewidth=1)
         
-        plt.ylabel(r"$E_g(eV)$")
+        plt.ylabel(r"$E-E_F(eV)$")
         plt.legend(handles=[line, scatter],labels=["TB model","DFT"])
         plt.title(title)
         plt.savefig(save_path)
-    
+
+        energy = self.content["energy"][:,band_index]
+        energy = energy.reshape(energy.shape[0],-1)
+        energy = torch.sort(torch.tensor(energy),dim=-1)[0].detach().numpy().T
+        print(energy - eigens[0,:,model_index])
+        print(np.mean(np.abs(energy - eigens[0,:,model_index])))
+
+
+
     
 if __name__ == "__main__":
     band = Band()
