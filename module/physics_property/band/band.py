@@ -123,16 +123,23 @@ class Band(Property):
         
         kpath = self.content['kpath']
         n_path = len(kpath)
+
+        for i in range(n_path):
+            if kpath[i][0] == "GAMMA":
+                kpath[i][0] = "\Gamma"
+            if kpath[i][1] == "GAMMA":
+                kpath[i][1] = "\Gamma"
+
         path_positions = np.linspace(0, 1, n_path + 1)
         tick_labels = []
         for i in range(n_path):
             if i == 0:
-                tick_labels.append(f"$"+kpath[i][0]+"$")
+                tick_labels.append(r"$"+kpath[i][0]+"$")
             else:
                 if kpath[i][0] == kpath[i-1][1]:
-                    tick_labels.append(f"$"+kpath[i][0]+"$")
-                else:tick_labels.append(f"$"+kpath[i-1][1]+"|"+kpath[i][0]+"$")
-        tick_labels.append(f"$"+kpath[-1][1]+"$")
+                    tick_labels.append(r"$"+kpath[i][0]+"$")
+                else:tick_labels.append(r"$"+kpath[i-1][1]+"|"+kpath[i][0]+"$")
+        tick_labels.append(r"$"+kpath[-1][1]+"$")
         plt.xticks(path_positions, tick_labels, rotation=0, ha='center')
         plt.xlim(0,1)
         for x in path_positions:
