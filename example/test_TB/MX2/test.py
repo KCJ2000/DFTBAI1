@@ -15,7 +15,7 @@ from module.physics_property.band.band import Band
 
 model_input={
     "sysinit":{
-        "sys_name":"MX2",
+        "sys_name":"MX2_d(no_z2)_p_3n",
         "group_type":"Magnetic Group",
         "group_name":"14.75",
         "lattice_type":"MonoPrim",
@@ -24,7 +24,7 @@ model_input={
         "magdirect":[[-1,0,0],[0,0,0]],
         "neighbour_list":[4,4]
     },
-    "orbit_init":[{"orbit_list":["dyz","dz2","dxz","dx2-y2","dxy"],"spin_dict":{"dyz":1,"dz2":1,"dxz":1,"dx2-y2":1,"dxy":1}},
+    "orbit_init":[{"orbit_list":["dyz","dxz","dx2-y2","dxy"],"spin_dict":{"dyz":1,"dxz":1,"dx2-y2":1,"dxy":1}},
                   {"orbit_list":["pz","py","px"],"spin_dict":{"px":1,"pz":1,"py":1}}]
     }
 # model = TBHamiltonian(**model_input)
@@ -45,9 +45,9 @@ para_train = Para4Band_train(model_path,
 band = Band()
 band.get_data("/data/home/kongfh/DFTBAI1/example/BAND-total/MnTe2-metal/BAND.dat")
 k_points = torch.tensor(band.content["k_vector"]).transpose(dim0=0,dim1=1)*2*torch.pi
-band_index = [i for i in range(70,84)]
+band_index = [i for i in range(72,82)]
 energy = torch.tensor(band.content["energy"][:,band_index,:].reshape(k_points.shape[1],-1))
-model_index = [i for i in range(6,34)]
+model_index = [i for i in range(14,34)]
 
 print("energy.shape",energy.shape)
 print("band_index:",band_index)
@@ -59,11 +59,16 @@ print("neighbour_list",model_input["sysinit"]["neighbour_list"])
 para = None
 
 start_time = time.time()
-para_train.train_emphasis_fermi(epoch = int(5e6),
+# para_train.train_emphasis_fermi(epoch = int(1e6),
+#                 k_points = k_points,
+#                 energy = energy,
+#                 model_index=model_index,
+#                 para=para,
+#                 emphasis_range=2.0,conv_limit=torch.tensor(0.5),fermi_energy=0.0)
+para_train.train(epoch = int(1e6),
                 k_points = k_points,
                 energy = energy,
                 model_index=model_index,
-                para=para,
-                emphasis_range=2.0,conv_limit=torch.tensor(0.5),fermi_energy=0.0)
+                para=para)
 end_time = time.time()
 print(end_time-start_time)

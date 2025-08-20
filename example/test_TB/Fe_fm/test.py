@@ -15,7 +15,7 @@ from module.physics_property.band.band import Band
 
 
 model_input = {"sysinit":{
-                            "sys_name":"Fe_fm_spd_4n",
+                            "sys_name":"Fe_fm_d_4n",
                             "group_type":"Magnetic Group",
                             "group_name":"139.537",
                             "lattice_type":"TetrBody",
@@ -24,7 +24,7 @@ model_input = {"sysinit":{
                             "magdirect":[[1,1,0]],
                             "neighbour_list":[4]
                             },
-            "orbit_init":[{"orbit_list":["s","px","py","pz","dxz","dz2","dx2-y2","dxy"],"spin_dict":{"s":1,"px":1,"py":1,"pz":1,"dz2":1,"dxz":1,"dxy":1,"dx2-y2":1}}]}
+            "orbit_init":[{"orbit_list":["dx2-y2","dxy","dz2","dxz"],"spin_dict":{"dx2-y2":1,"dxy":1,"dz2":1,"dxz":1}}]}
 model = TBHamiltonian(**model_input)
 model.save_model("/data/home/kongfh/DFTBAI1/example/test_TB/Fe_fm")
 print(model.sym_hamiltonian_dict)
