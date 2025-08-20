@@ -191,7 +191,7 @@ class Band(Property):
                     if kpath[i][0] == kpath[i-1][1]:
                         tick_labels.append(r"$"+kpath[i][0]+"$")
                     else:tick_labels.append(r"$"+kpath[i-1][1]+"|"+kpath[i][0]+"$")
-            tick_labels.append(kpath[-1][1])
+            tick_labels.append(r"$"+kpath[-1][1]+"$")
             plt.xticks(path_positions, tick_labels, rotation=0, ha='center')
             plt.xlim(0,1)
             for x in path_positions:### 画竖直虚线
