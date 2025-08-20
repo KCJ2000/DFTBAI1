@@ -39,50 +39,8 @@ class ParaTB(nn.Module):
         name = model_dict['name']
         matrix = sum(matrix.values())
         matrix_dim = matrix.shape[0]
-        return matrix,model_info,num_symbols,name,matrix_dim
-        
-        
-    # def __create_ele_function(self,exp_list,formula_list):
-    #     num_exp = len(exp_list)
-    #     exp_list = np.array(exp_list)
-    #     exp_list = torch.tensor(exp_list).to(self.device)
-    #     num_para = self.num_para
-    #     if num_exp != 0:
-    #         formula = torch.stack([torch.sum(torch.stack([self.para[symbol]*values for symbol,values in formula_list[i].items()]),axis=0)
-    #             for i in range(num_exp)
-    #         ]).type(torch.complex64).to(self.device)
-    #         formula = formula.transpose(dim0=1,dim1=0)
-    #         def ele_function(input_data):
-    #             ### input_data一定是kx,ky,kz，(3,num_points)
-    #             ### 这里实际上就是formula*exp的形式只不过用矩阵的形式，进行优化
-    #             input_data = input_data.type(exp_list.dtype).to(self.device)
-    #             exp_term = torch.matmul(exp_list,input_data)
-    #             exp_term = torch.exp(1j*exp_term).type(torch.complex64)
-    #             ele = torch.matmul(formula,exp_term)
-    #             return ele
-    #     else:
-    #         def ele_function(input_data):
-    #             num_point = input_data.shape[1]
-    #             return torch.zeros(num_para,num_point).to(self.device)
-        
-    #     return ele_function      
+        return matrix,model_info,num_symbols,name,matrix_dim   
                 
-    
-    # def __create_TB_function(self):
-    #     matrix_dim = self.matrix.shape[0]
-    #     num_para = self.num_para
-    #     function_matrix = np.zeros((matrix_dim,matrix_dim),dtype=object)
-    #     for i in range(matrix_dim):
-    #         for j in range(matrix_dim):
-    #             function_matrix[i,j] = self.__create_ele_function(self.matrix[i,j].exp_list,self.matrix[i,j].formula_list)
-    #     def matrix_function(input_data):
-    #         num_points = input_data.shape[1]
-    #         matrix = torch.zeros(num_para,num_points,matrix_dim,matrix_dim,dtype=torch.complex64).to(self.device)
-    #         for i in range(matrix_dim):
-    #             for j in range(matrix_dim):
-    #                 matrix[:,:,i,j] = function_matrix[i,j](input_data)
-    #         return matrix
-    #     return matrix_function
     
     def __get_exp(self,exp_term):
         for i in range(self.matrix_dim):
