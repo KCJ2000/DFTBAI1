@@ -9,120 +9,13 @@ import torch.optim as opt
 # torch.autograd.set_detect_anomaly(True)
 
 from parameter.para4tb import ParaTB,ParaTB_train
-
-
-class Stiefel_Frame(nn.Module):
-    """为特征向量形成的Frame始终满足X^drag@X = I_p,X belongs to St(n,p)
-        n是模型维数,p是需要拟合成的能带的个数
-    """
-    def __init__(self,eigenvector):
-        super().__init__()
-        # print(torch.nonzero(torch.abs(eigenvector.transpose(-1,-2).conj()@eigenvector - torch.eye(eigenvector.shape[-1]))>1e-5))
-        if torch.nonzero(torch.abs(eigenvector.transpose(-1,-2).conj()@eigenvector - torch.eye(eigenvector.shape[-1],device=eigenvector.device))>1e-5).shape != torch.Size([0, 4]):
-            raise ValueError("eigenvector初始化后并不正交，请正交后重新输入")
-        self.frame = eigenvector.detach().clone().requires_grad_(True)
-        self.M = torch.zeros_like(self.frame) ### 用于Cayley Adam算法
-
-    def QR_retraction(self):
-        Q,R = torch.linalg.qr(self.frame)
-        # print("Q^H@Q",torch.nonzero(torch.abs(Q.transpose(-1,-2).conj()@Q-torch.eye(4))>1e-4))
-        self.frame.data = Q
-
-    @torch.no_grad()
-    def fast_cayley_retraction(self,n_step,alpha,lr,beta1=0.9,beta2=0.999,eps=1e-8,q=0.5,max_iter=3):
-        G = self.frame.grad
-        n_step += 1
-        self.M = beta1*self.M + (1-beta1)*G
-        # if n_step%1 == 0:
-        #     print("v_h",v_h,"r",r,"v",self.v)
-        W_h = self.M@self.frame.transpose(-1,-2).conj() - 0.5*self.frame@(self.frame.transpose(-1,-2).conj()@self.M@self.frame.transpose(-1,-2).conj())
-        W = (W_h - W_h.transpose(-1,-2).conj())
-        self.M = W@self.frame
-        alpha = min(lr,2*q/(eps+torch.norm(W)))
-        Y = self.frame - alpha*self.M
-        for i in range(max_iter):
-            Y = self.frame - alpha/2*W@(self.frame+Y)
-        del self.frame
-        self.frame = Y.detach().clone().requires_grad_(True)
-        
-
-    def forward(self,matrices):
-        return Stiefel_Frame_Function.apply(matrices,self.frame)
-    
-
-class Stiefel_Frame_Function(torch.autograd.Function):
-    @staticmethod
-    def forward(ctx,matrices,frame):
-        ctx.save_for_backward(matrices,frame)
-        eigen_matrices = torch.matmul(frame.conj().transpose(-1,-2),matrices)
-        eigen_matrices = torch.matmul(eigen_matrices,frame)
-        return eigen_matrices
-
-    @staticmethod
-    def backward(ctx, grad_ouput):
-        matrices, frame = ctx.saved_tensors
-        sym = (grad_ouput + grad_ouput.transpose(-1,-2).conj())/2
-        grad_G = 2*matrices@frame@sym
-        grad_M = frame@sym@frame.transpose(-1,-2).conj()
-        ### tangent space projection
-        # grad_f = grad_G - frame@(frame.transpose(-1,-2).conj()@grad_G+grad_G.transpose(-1,-2).conj()@frame)/2
-        return grad_M, grad_G
-    
-
-class Eigen_Trans(nn.Module):
-    def __init__(self, eigenvector):
-        super().__init__()
-        self.frame = nn.Parameter(eigenvector)
-    def forward(self,matrices):
-        eigen_matrices = torch.matmul(self.frame.conj().transpose(-1,-2),matrices)
-        eigen_matrices = torch.matmul(eigen_matrices,self.frame)
-        return eigen_matrices
-
-
-class Para4Band(ParaTB):
-    def __init__(self, model_path: str,zero_index=None,device:str=None) -> None:
-        super().__init__(model_path,zero_index,device)
-        self.property_for_opt = "band"
-        self.have_init_trans = False
-        self.set_zero_and_init_matrix_fuction()
-        
-    def init_frame(self,input_data,model_index,para=None):
-        if para != None:
-            self.init_para(para)
-        matrices = self.matrix_function(input_data)
-        eigenvalue, eigenvector = torch.linalg.eigh(matrices)
-        eigenvector = eigenvector.detach()
-        eigenvalue,idx = torch.sort(eigenvalue,dim=-1)
-        eigenvector = torch.gather(eigenvector,dim=-1,index=idx.unsqueeze(-1).expand_as(eigenvector).transpose(-1,-2))
-        # print("ss",torch.nonzero(torch.abs(eigenvector.transpose(-1,-2).conj()@eigenvector)-torch.eye(10)>1e-3).shape)
-        self.frame_trans = Stiefel_Frame(eigenvector[:,:,:,model_index])
-        self.have_init_trans = True
-
-    def init_trans_matrix(self,input_data,para=None):
-        if para != None:
-            self.init_para(para)
-        matrices = self.matrix_function(input_data)
-        _ , eigenvector = torch.linalg.eigh(matrices)
-        eigenvector = eigenvector.detach()
-        self.frame_trans = Eigen_Trans(eigenvector)
-        self.have_init_trans = True
-    
-    
-    def forward(self,input_data):
-        self.matrix_function = self.create_model_function()
-        matrices = self.matrix_function(input_data)
-        if self.have_init_trans:
-            eigen_matrices = self.frame_trans(matrices)
-        else:
-            self.init_trans_matrix(input_data)
-            eigen_matrices = self.forward(input_data)
-        return eigen_matrices
+from parameter.para4band.para4band_manager import para4band_manager
     
     
 class Para4Band_train(ParaTB_train):
     def __init__(self,model_path,mask_index = None,zero_index = None,device=None):
         super(Para4Band_train,self).__init__(model_path,mask_index,zero_index,device)
-        self.para4TB = Para4Band(self.model_path,zero_index,device)
+        self.para4TB = para4band_manager(self.model_path,zero_index,device).tool
         self.mask()
 
     def init_para(self,para):
@@ -579,7 +472,7 @@ class Para4Band_train(ParaTB_train):
 
         loss3 = self.loss1(eigen_matrices)
 
-        return loss1 + loss2 + 1e6*loss3, loss1, loss2, loss3
+        return loss1 + loss2 + 1e3*loss3, loss1, loss2, loss3
 
 
 
@@ -684,10 +577,10 @@ import time
 if __name__ == "__main__":
     mask = [1,2,6,7,9,10,12]
     # mask = []
-    para_train = Para4Band_train("/data/home/kongfh/DFTBAI1/example/test_TB/Si_like/Si_PC/Si_sps'.pkl",
+    para_train = Para4Band_train("/Volumes/KINGSTON/DFTBAI/DFTBAI_code/dftbai/example/test_TB/Si_like/Si_PC/Si_sps'.pkl",
                                  zero_index=mask,
                               mask_index=mask)
-    band_in = BandDataIn("/data/home/kongfh/DFTBAI1/example/test_TB/Si_like/Si_PC/BAND.dat")
+    band_in = BandDataIn("/Volumes/KINGSTON/DFTBAI/DFTBAI_code/dftbai/example/test_TB/Si_like/Si_PC/BAND.dat")
     k_points = torch.tensor(band_in.content["k_vector"]).transpose(dim0=0,dim1=1)*2*torch.pi
     band_index = [1,2,3,4]
     energy = torch.tensor(band_in.content["energy"][:,band_index,0])

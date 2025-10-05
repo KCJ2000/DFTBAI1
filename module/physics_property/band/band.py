@@ -10,7 +10,7 @@ import torch
 from physics_property.property import Property
 from physics_property.band.band_data_in import BandDataIn
 from physics_property.band.band_data_out import BandDataOut
-from parameter.para4band.para4band import Para4Band
+from parameter.para4band.para4band_manager import para4band_manager
 
 
 class Band(Property):
@@ -21,7 +21,7 @@ class Band(Property):
         
     def init_calculate_model(self, model_path,para):
         super().init_calculate_model(model_path)
-        self.para_calculate = Para4Band(self.model_path)
+        self.para_calculate = para4band_manager(self.model_path).tool
         self.para_calculate.init_para(para)
         self.matrix_function = self.para_calculate.matrix_function
         
