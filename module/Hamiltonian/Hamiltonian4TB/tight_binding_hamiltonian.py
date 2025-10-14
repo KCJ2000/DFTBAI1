@@ -10,7 +10,7 @@ import json
 import numbers
 
 from Hamiltonian.hamiltonian import Hamiltonian
-from Hamiltonian.matrix_element import Matrix_Ele
+from Hamiltonian.Hamiltonian4TB.matrix_element import Matrix_Ele
 from physics_system.periodicity.Periodicity_System import PeriodicityPhysicsSystem
 from orbit.orbit_spd.Orbit_spd_manager import orbit_spd_manager
 
