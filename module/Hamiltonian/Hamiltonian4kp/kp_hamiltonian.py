@@ -338,9 +338,3 @@ if __name__ == "__main__":
     print(end_time-start_time)
     ham = kp.kp_hamiltonian_dict[2]
     print(len(ham))
-    # for i in range(3):
-    #     for j in range(3):
-    #         print(i,j,"sigma_0",ham[i,j,0])
-    #         print(i,j,"sigma_x",ham[i,j,1])
-    #         print(i,j,"sigma_y",ham[i,j,2])
-    #         print(i,j,"sigma_z",ham[i,j,3])
