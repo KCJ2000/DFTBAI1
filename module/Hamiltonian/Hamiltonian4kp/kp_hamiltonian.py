@@ -14,6 +14,7 @@ import numbers
 import itertools
 from collections import Counter
 import math
+import pickle
 
 class MyDict(dict):
     def __add__(self, other):
@@ -75,6 +76,8 @@ class kpHamiltonian(Hamiltonian):
         print("完成初始化构建")
         print("kp_hamiltonian",self.kp_hamiltonian_dict)
         self.__generator()
+        print("完成对称性约束")
+        self.__modify_symbols()
         print("kp_hamiltonian",self.kp_hamiltonian_dict)
 
 
@@ -89,7 +92,7 @@ class kpHamiltonian(Hamiltonian):
         num_off_diag = len(idx[0])
         
         # 初始化生成元列表
-        generators = [np.eye(n, dtype=complex)]
+        generators = []
         # generators = []
         
         # 生成非对角线上的生成元
@@ -115,8 +118,10 @@ class kpHamiltonian(Hamiltonian):
             D[m, m] = -m / np.sqrt(2 * m * (m + 1))
             generators.append(1j * D)
 
-        generators = [np.sqrt(2)*generator0 for generator0 in generators]
-
+        generators = [(-1j)*np.sqrt(2)*generator0 for generator0 in generators]
+        # print([generator0.conj().T - generator0 for generator0 in generators])
+        generators.insert(0,np.eye(n,dtype=complex))
+        
         return np.array(generators)
 
 
@@ -145,7 +150,7 @@ class kpHamiltonian(Hamiltonian):
         return ham
 
 
-    def __exact_var(self,ham_array):
+    def __exact_var_array(self,ham_array):
         var_list = []
         it = np.nditer(ham_array, flags=['multi_index','refs_ok'], op_flags=['readwrite'])
         for ele in it:
@@ -158,6 +163,16 @@ class kpHamiltonian(Hamiltonian):
         num_var = len(var_list)
         return var_list, num_var
     
+    def __exact_var_dict(self,ham_dict):
+        sym_list = []
+        for order0 in self.order:
+            ham_dict0 = ham_dict[order0]
+            for k,formula in ham_dict0.items():
+                for sym in formula.keys():
+                    if sym not in sym_list:
+                        sym_list.append(sym)
+        return sym_list,len(sym_list)
+
     def __exact_eqaution(self,var_list,num_var,ham_array):
         equations = []
         it = np.nditer(ham_array, flags=['multi_index','refs_ok'], op_flags=['readwrite'])
@@ -241,7 +256,7 @@ class kpHamiltonian(Hamiltonian):
         return ham_dict
 
 
-    def basis_trans(self,trans_matrix):
+    def basis_trans(self,trans_matrix,if_anitunitary):
         """
         得到basis的旋转得到旋转矩阵
         trans_matrix: the unitary matrix to rotate the basis
@@ -253,8 +268,10 @@ class kpHamiltonian(Hamiltonian):
         
         n_basis = self.basis.shape[0]
         basis = np.expand_dims(self.basis, axis=0)
-  
-        basis = trans_matrix@basis@trans_matrix.conj().T
+        if not if_anitunitary:
+            basis = trans_matrix@basis@trans_matrix.conj().T
+        else:
+            basis = trans_matrix@basis.conj()@trans_matrix.conj().T
         basis = basis.repeat(n_basis,axis=0)
 
         basis = np.transpose(basis,axes=(0, 1, 3, 2)).conj()
@@ -286,16 +303,20 @@ class kpHamiltonian(Hamiltonian):
         return symmetric_A
 
 
-    def rotation(self,k_rotation,basis_rotation,ham):
+    def rotation(self,basis_rotation,k_rotation,ham,if_anitunitary:bool):
         ham_index = list(ham.keys())
         ham_index_array = np.array(ham_index).T
         trans_index = tuple([ham_index_array[i] for i in range(ham_index_array.shape[0])])
         rotation_equation_array = np.zeros(len(ham_index),dtype=object)
-
+        basis_transform = self.basis_trans(basis_rotation,if_anitunitary)
         for index in ham_index:
             n = len(index)
-            vector_list = [k_rotation[index[i]] for i in range(n-1)]
-            vector_list.append(basis_rotation[index[-1]])
+            if not if_anitunitary:
+                vector_list = [k_rotation[index[i]] for i in range(n-1)]
+                vector_list.append(basis_transform[index[-1]])
+            else:
+                vector_list = [-k_rotation[index[i]] for i in range(n-1)]
+                vector_list.append(basis_transform[index[-1]])
             indices = ','.join([chr(97 + i) for i in range(n)])  # 'i,j,k'
             output_indices = ''.join([chr(97 + i) for i in range(n)])  # 'ijk'
             einsum_expr = f'{indices}->{output_indices}'
@@ -306,35 +327,73 @@ class kpHamiltonian(Hamiltonian):
         return rotation_equation_array, ham_index
 
 
-
     def __generator(self):
         for order0 in self.order:
             ham = self.kp_hamiltonian_dict[order0]
             
             for rotation in self.rotation_list:
-                basis_trans_matrix = self.basis_trans(rotation[0])
-                ham_rotation,ham_index = self.rotation(rotation[1],basis_trans_matrix,ham)
+                ham_rotation,ham_index = self.rotation(rotation[0],rotation[1],ham,rotation[2])
                 ham_array = np.array([ham[ham_index0] for ham_index0 in ham_index])
                 delta = ham_array - ham_rotation
                 # print("ham_final",ham_rotation)
                 # print("ham_array",ham_array)
-                # print("delta",delta)
-                var_list, num_var = self.__exact_var(delta)
+                #print("delta",delta)
+                var_list, num_var = self.__exact_var_array(delta)
                 equations = self.__exact_eqaution(var_list,num_var,delta)
                 equations = self.__gaussian_elimination(equations)
                 ham = self.replace(equations,var_list,ham)
+                #print("ham",ham)
             self.kp_hamiltonian_dict[order0] = ham
+            
 
-    
+    def __modify_symbols(self):
+        orders = self.kp_hamiltonian_dict.keys()
+        index_anchor = 0
+        for order in orders:
+            ham = self.kp_hamiltonian_dict[order]
+            self.var_list,self.var_num = self.__exact_var_dict(self.kp_hamiltonian_dict)
+            symbol_replace_dict = {self.var_list[i]:index_anchor+i for i in range(self.var_num)}
+            index_anchor += self.var_num
+            for k,v in ham.items():
+                new_formula = {symbol_replace_dict[key]:value for key,value in v.items() if key in symbol_replace_dict.keys()}
+                ham[k] = new_formula
+            self.kp_hamiltonian_dict[order] = ham
 
+    def save_model(self,save_path):
+        file_name = os.path.join(save_path,self.sysinit["sys_name"]+".pkl")
+        content = {
+            "rotation":self.rotation_list,
+            "model":self.kp_hamiltonian_dict,
+            "num_symbols":self.var_num,
+            "name":self.name,
+            "basis":self.basis
+        }
+        with open(file_name,"wb") as f:
+            pickle.dump(content,f)
 
 
 import time
 if __name__ == "__main__":
-    rotation_list = [(np.array([[1,  0],[0, -1]]),np.array([[0,-1,0],[1,0,0],[0,0,1]]))]
-    start_time = time.time()
-    kp = kpHamiltonian(dim = 2 ,order = [2],rotation_list=rotation_list)
-    end_time = time.time()
+    rotation_list = [(np.array([[1,  0],[0, -1]]),np.array([[0,-1,0],[1,0,0],[0,0,1]]),False),(np.array([[1,  0],[0, 1]]),-np.eye(3),True)]
+    start_time = time.perf_counter()
+    kp = kpHamiltonian(dim = 2 ,order = [1],rotation_list=rotation_list)
+    end_time = time.perf_counter()
     print(end_time-start_time)
-    ham = kp.kp_hamiltonian_dict[2]
+    ham = kp.kp_hamiltonian_dict[1]
     print(len(ham))
+
+    ##L4L4
+    # C31=np.array([[-1,0,0,0],[0,-1,0,0],[0,0,-1,0],[0,0,0,-1]])
+    # C2b=np.array([[1j,0,0,0],[0,-1j,0,0],[0,0,1j,0],[0,0,0,-1j]])
+    # Inv=np.array([[0,1,0,0],[1,0,0,0],[0,0,0,1],[0,0,1,0]])
+    # T=np.array([[0,0,0,-1],[0,0,-1,0],[0,1,0,0],[1,0,0,0]])
+    # rotation_list = [(C31,np.linalg.inv(np.array([[0,0,1],[1,0,0],[0,1,0]])),False),
+    #                  (C2b,np.linalg.inv(np.array([[0,-1,0],[-1,0,0],[0,0,-1]])),False),
+    #                  (Inv,np.linalg.inv(np.array([[-1,0,0],[0,-1,0],[0,0,-1]])),False),
+    #                  (T,np.eye(3),True)]
+    # start_time = time.perf_counter()
+    # kp = kpHamiltonian(dim = 4 ,order = [1],rotation_list=rotation_list)
+    # end_time = time.perf_counter()
+    # print(end_time-start_time)
+    # print(kp.basis_trans(T,True))
+
