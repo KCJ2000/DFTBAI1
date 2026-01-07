@@ -9,7 +9,7 @@
     "D2h":["E","C2x","C2y","C2z","I","Sigma_x","Sigma_y","Sigma_z"],
     "C4":["E","C4z+","C4z-","C2z"],
     "S4":["E","S4z","S4z+","C2z"],
-    "C4h":["E","C4z+","C4z-","C2z","I","S4z","S4z+","Sigma_z"],
+    "C4h":["E","C4z+","C4z-","C2z","I","S4z-","S4z+","Sigma_z"],
     "D4":["E","C4z+","C4z-","C2z","C2x","C2y","C2a","C2b"],
     "C4v":["E","C4z+","C4z-","C2z","Sigma_x","Sigma_y","Sigma_da","Sigma_db"],
     "D2d":["E","S4z+","S4z-","C2z","C2x","C2y","Sigma_da","Sigma_db"],
