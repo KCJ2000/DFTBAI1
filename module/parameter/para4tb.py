@@ -88,7 +88,7 @@ class ParaTB(nn.Module):
         if not self.__have_get_TB_fix_data:
             self.__get_TB_fix_data()
         formula_symbol = torch.zeros(self.matrix_dim,self.matrix_dim,self.max_exp_term,2,self.num_para,
-                                     device=self.device)
+                                     device=self.device) ### 每个exp term前的参数个数不会超过2个，因为实数虚数各一个，replace的公式是否可能使得参数超过两个，还不确定，所以这里可能有bug.如果有bug，就在get_values_and_index函数运行之前，把所有的公式长度用Tensor储存，然后求max，在get_values_and_index函数遍历formula时也可以直接调用
         para_tensor = torch.stack([para for para in self.para])
         # print(formula_symbol.shape)
         # print(formula_symbol[torch.tensor([[0,0,0,0,0]])].shape)
